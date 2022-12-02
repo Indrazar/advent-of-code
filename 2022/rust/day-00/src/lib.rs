@@ -14,8 +14,7 @@ mod tests {
 
     #[test]
     fn test_input() {
-        let file: &str = fs::read_to_string("./test-input-1.txt").unwrap().as_str();
-        let result = 4;
-        assert_eq!(result, 4);
+        let file = fs::read_to_string("./test-input-1.txt").unwrap();
+        assert_eq!(process_part1(file.as_str()), "works");
     }
 }
