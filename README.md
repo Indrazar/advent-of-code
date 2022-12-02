@@ -2,16 +2,14 @@
 
 ## Prep for new day
 ### Rust
+copy day-00 directory and paste as day-xx where xx is the current day
+update day-00 in the following files:
 ```bash
-mkdir yyyy/rust/
-cd yyyy/rust/
-cargo new --lib day-dd
-cd day-dd
-mkdir src/bin
-touch src/bin/part-1.rs
-touch src/bin/part-2.rs
-touch input.txt
+Cargo.toml
+src/bin/part1.rs
+src/bin/part2.rs
 ```
+
 ### Setup cargo watch
 while in the day directory:
 ```bash
