@@ -1,26 +1,16 @@
+#![feature(iter_array_chunks)]
+
 pub fn process_part1(input: &str) -> String {
     let result: usize = input
         .lines()
         .map(|line| {
-            if line.chars().count() % 2 == 1 {
-                panic!("odd number of objects");
-            }
+            // we assume input is well-formed
             let (first, second) = line.split_at(line.chars().count() / 2);
-            let collision: char = {
-                let mut found: Option<char> = Option::None;
-                for letter in first.chars() {
-                    for x in second.chars() {
-                        if letter == x {
-                            found = Some(letter);
-                            break;
-                        }
-                    }
-                    if found.is_some() {
-                        break;
-                    }
-                }
-                found.unwrap()
-            };
+            // we can do this because there is guaranteed to be exactly ONE collision
+            let collision = first
+                .chars()
+                .find(|letter| second.contains(*letter))
+                .unwrap();
             map_priority(collision)
         })
         .sum();
@@ -28,52 +18,15 @@ pub fn process_part1(input: &str) -> String {
 }
 
 pub fn process_part2(input: &str) -> String {
-    let mut counter = 0;
     let result: usize = input
-        .split(|letter| {
-            if letter == '\n' {
-                counter += 1;
-                if counter == 3 {
-                    counter = 0;
-                    true
-                } else {
-                    false
-                }
-            } else {
-                false
-            }
-        })
-        .map(|group| {
-            if group.split_once('\n').is_none() {
-                return 0;
-            }
-            let (first, rest): (&str, &str) = group.split_once('\n').unwrap();
-            if rest.split_once('\n').is_none() {
-                return 0;
-            }
-            let (second, third) = rest.split_once('\n').unwrap();
-            let collision: char = {
-                let mut found: Option<char> = Option::None;
-                for letter in first.chars() {
-                    for x in second.chars() {
-                        if letter == x {
-                            for y in third.chars() {
-                                if letter == y {
-                                    found = Some(letter);
-                                    break;
-                                }
-                            }
-                            if found.is_some() {
-                                break;
-                            }
-                        }
-                    }
-                    if found.is_some() {
-                        break;
-                    }
-                }
-                found.unwrap()
-            };
+        .lines()
+        .array_chunks::<3>()
+        .map(|[first, second, third]| {
+            // we can do this because there is guaranteed to be exactly ONE collision
+            let collision = first
+                .chars()
+                .find(|letter| second.contains(*letter) && third.contains(*letter))
+                .unwrap();
             map_priority(collision)
         })
         .sum();
@@ -81,10 +34,10 @@ pub fn process_part2(input: &str) -> String {
 }
 
 fn map_priority(input: char) -> usize {
-    if input as usize > 96 {
-        input as usize - 'a' as usize + 1
-    } else {
-        input as usize - 'A' as usize + 27
+    match input {
+        'a'..='z' => input as usize - 'a' as usize + 1, // a = 1, b = 2, etc
+        'A'..='Z' => input as usize - 'A' as usize + 27, // A = 27, B = 28, etc
+        _ => todo!("invalid character found in map_priority"),
     }
 }
 
