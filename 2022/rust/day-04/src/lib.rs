@@ -23,7 +23,6 @@ pub fn process_part1(input: &str) -> String {
             }
         })
         .sum::<usize>();
-    dbg!(result);
     result.to_string()
 }
 
@@ -41,7 +40,6 @@ pub fn process_part2(input: &str) -> String {
             if left_end < right_start || right_end < left_start { 0 } else { 1 }
         })
         .sum::<usize>();
-    dbg!(result);
     result.to_string()
 }
 
