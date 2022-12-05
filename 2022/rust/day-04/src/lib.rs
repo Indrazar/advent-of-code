@@ -1,25 +1,54 @@
+use nom::{bytes::complete::tag, character::complete, *};
+
+struct LineData {
+    left_start: u32,
+    left_end: u32,
+    right_start: u32,
+    right_end: u32,
+}
+
+fn parse_line(input: &str) -> IResult<&str, LineData> {
+    let (input, left_start) = complete::u32(input)?;
+    let (input, _) = tag("-")(input)?;
+    let (input, left_end) = complete::u32(input)?;
+    let (input, _) = tag(",")(input)?;
+    let (input, right_start) = complete::u32(input)?;
+    let (input, _) = tag("-")(input)?;
+    let (input, right_end) = complete::u32(input)?;
+    Ok((
+        input,
+        LineData {
+            left_start,
+            left_end,
+            right_start,
+            right_end,
+        },
+    ))
+}
+
 pub fn process_part1(input: &str) -> String {
     let result: usize = input
         .lines()
         .map(|line| {
-            let line = line.split(',').collect::<Vec<&str>>();
-            let left = line[0].split('-').collect::<Vec<&str>>();
-            let right = line[1].split('-').collect::<Vec<&str>>();
-            let left_start: usize = left[0].parse().unwrap();
-            let left_end: usize = left[1].parse().unwrap();
-            let right_start: usize = right[0].parse().unwrap();
-            let right_end: usize = right[1].parse().unwrap();
-            let left_size = left_end - left_start;
-            let right_size = right_end - right_start;
-            if left_size < right_size {
-                if left_start >= right_start {
-                    if left_end <= right_end { 1 } else { 0 }
-                } else { 0 }
+            if let Ok((_, d)) = parse_line(line) {
+                let left_size = d.left_end - d.left_start;
+                let right_size = d.right_end - d.right_start;
+                if left_size < right_size {
+                    if d.left_start >= d.right_start && d.left_end <= d.right_end {
+                        1
+                    } else {
+                        0
+                    }
+                } else {
+                    // right is bigger
+                    if d.right_start >= d.left_start && d.right_end <= d.left_end {
+                        1
+                    } else {
+                        0
+                    }
+                }
             } else {
-                // right is bigger
-                if right_start >= left_start {
-                    if right_end <= left_end { 1 } else { 0 }
-                } else { 0 }
+                0
             }
         })
         .sum::<usize>();
@@ -30,14 +59,15 @@ pub fn process_part2(input: &str) -> String {
     let result: usize = input
         .lines()
         .map(|line| {
-            let line = line.split(',').collect::<Vec<&str>>();
-            let left = line[0].split('-').collect::<Vec<&str>>();
-            let right = line[1].split('-').collect::<Vec<&str>>();
-            let left_start: usize = left[0].parse().unwrap();
-            let left_end: usize = left[1].parse().unwrap();
-            let right_start: usize = right[0].parse().unwrap();
-            let right_end: usize = right[1].parse().unwrap();
-            if left_end < right_start || right_end < left_start { 0 } else { 1 }
+            if let Ok((_, d)) = parse_line(line) {
+                if d.left_end < d.right_start || d.right_end < d.left_start {
+                    0
+                } else {
+                    1
+                }
+            } else {
+                0
+            }
         })
         .sum::<usize>();
     result.to_string()
