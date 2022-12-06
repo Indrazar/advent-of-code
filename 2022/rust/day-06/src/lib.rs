@@ -1,33 +1,29 @@
 use std::collections::BTreeSet;
 
-pub fn process_part1(input: &str) -> String {
+fn first_unique(input: &str, window: usize) -> Option<usize> {
     let char_holder = input
         .chars()
         .collect::<Vec<char>>();
     let sequence = char_holder
-        .windows(4)
+        .windows(window)
         .enumerate()
         .find(|(_i, slice)| {
             let set = slice.iter().collect::<BTreeSet<&char>>();
             slice.len() == set.len()
-        })
-        .unwrap();
-    (sequence.0 + 4).to_string()
+        });
+    if let Some((position, _)) = sequence {
+        Some(position + window)
+    } else {
+        None
+    }
+}
+
+pub fn process_part1(input: &str) -> String {
+    first_unique(input, 4).unwrap().to_string()
 }
 
 pub fn process_part2(input: &str) -> String {
-    let char_holder = input
-        .chars()
-        .collect::<Vec<char>>();
-    let sequence = char_holder
-        .windows(14)
-        .enumerate()
-        .find(|(_i, slice)| {
-            let set = slice.iter().collect::<BTreeSet<&char>>();
-            slice.len() == set.len()
-        })
-        .unwrap();
-    (sequence.0 + 14).to_string()
+    first_unique(input, 14).unwrap().to_string()
 }
 
 
