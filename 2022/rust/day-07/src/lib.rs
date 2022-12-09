@@ -8,16 +8,16 @@ fn parse_tree(input: &str) -> BTreeMap<Vec<String>, u64> {
             Some("dir") => { continue; } // the names will propagate from cd
             Some("$") => {
                 match line.split_whitespace().nth(1) {
-                    Some("ls") => continue, // on't care about the command itself
+                    Some("ls") => continue, // don't care about the command itself
                     Some("cd") => {
                         match line.split_whitespace().nth(2) {
                             Some("..") => { cwd.pop(); } // go up a directory
-                            Some("/") => cwd.push("/".to_string()), //no double / 
+                            Some("/") => cwd.push("/".to_string()), //no double forward slashes
                             Some(name) => { 
                                 cwd.push(name.to_string() + "/");// given a directory to go deeper
                                 // collect cwd and push to list of all dirs
                             },
-                            None => todo!(), // cd \n is bad input
+                            None => todo!(), // cd\n is bad input
                         }
                     }
                     Some(_) => todo!(), // unknown command
