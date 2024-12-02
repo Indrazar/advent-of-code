@@ -1,16 +1,6 @@
 use std::collections::HashMap;
 use std::iter::zip;
 
-pub trait SneakPrintStr {
-    fn sneak_print(&self) -> &str;
-}
-impl SneakPrintStr for str {
-    fn sneak_print(&self) -> &str {
-        println!("{:?}", self);
-        self
-    }
-}
-
 fn split_numbers(line: &str) -> (i32, i32) {
     let parts: Vec<&str> = line.split_whitespace().collect();
     let res1: i32 = parts[0].parse().unwrap();
