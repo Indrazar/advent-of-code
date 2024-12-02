@@ -103,12 +103,11 @@ pub fn process_part2(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
 
     #[test]
     fn test_input() {
-        let file = fs::read_to_string("./test-input-1.txt").unwrap();
-        assert_eq!(process_part1(file.as_str()), "2");
-        assert_eq!(process_part2(file.as_str()), "4");
+        let file = include_str!("../test-input-1.txt");
+        assert_eq!(process_part1(file), "2");
+        assert_eq!(process_part2(file), "4");
     }
 }

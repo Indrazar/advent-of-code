@@ -63,7 +63,6 @@ pub fn process_part2(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
 
     #[test]
     fn test_split() {
@@ -73,12 +72,8 @@ mod tests {
 
     #[test]
     fn test_input() {
-        let file = fs::read_to_string("./test-input-1.txt").unwrap();
-        assert_eq!(process_part1(file.as_str()), "11");
-    }
-    #[test]
-    fn test_input2() {
-        let file = fs::read_to_string("./test-input-1.txt").unwrap();
-        assert_eq!(process_part2(file.as_str()), "31");
+        let file = include_str!("../test-input-1.txt");
+        assert_eq!(process_part1(file), "11");
+        assert_eq!(process_part2(file), "31");
     }
 }
