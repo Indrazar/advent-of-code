@@ -15,12 +15,9 @@ enum Instruction {
     Enable,
 }
 
-//fn parse_integer_pair(input: &str) -> IResult<&str, (i32, i32)> {}
-
 fn parse_mult_pair(input: &str) -> IResult<&str, Instruction> {
-    let (input, _) = tag("mul")(input)?;
     let (input, (x, y)) = delimited(
-        tag("("),
+        tag("mul("),
         separated_pair(complete::i32, tag(","), complete::i32),
         tag(")"),
     )(input)?;
@@ -28,20 +25,8 @@ fn parse_mult_pair(input: &str) -> IResult<&str, Instruction> {
     Ok((input, Instruction::Mul(x, y)))
 }
 
-fn parse_conditional_mult(input: &str) -> IResult<&str, Instruction> {
-    alt((
-        value(Instruction::Disable, tag("don\'t()")),
-        value(Instruction::Enable, tag("do()")),
-        parse_mult_pair,
-    ))(input)
-}
-
 fn parse(input: &str) -> IResult<&str, Vec<Instruction>> {
     many1(many_till(anychar, parse_mult_pair).map(|(_discard, ins)| ins))(input)
-}
-
-fn conditional_parse(input: &str) -> IResult<&str, Vec<Instruction>> {
-    many1(many_till(anychar, parse_conditional_mult).map(|(_discard, ins)| ins))(input)
 }
 
 pub fn process_part1(input: &str) -> String {
@@ -50,11 +35,22 @@ pub fn process_part1(input: &str) -> String {
         .iter()
         .map(|instruction| match instruction {
             Instruction::Mul(x, y) => x * y,
-            Instruction::Enable => panic!("shouldn't get this"),
-            Instruction::Disable => panic!("shouldn't get this"),
+            _ => panic!("shouldn't get this instruction type in part1"),
         })
         .sum::<i32>()
         .to_string()
+}
+
+fn parse_conditional_mult(input: &str) -> IResult<&str, Instruction> {
+    alt((
+        value(Instruction::Disable, tag("don't()")),
+        value(Instruction::Enable, tag("do()")),
+        parse_mult_pair,
+    ))(input)
+}
+
+fn conditional_parse(input: &str) -> IResult<&str, Vec<Instruction>> {
+    many1(many_till(anychar, parse_conditional_mult).map(|(_discard, ins)| ins))(input)
 }
 
 pub fn process_part2(input: &str) -> String {
@@ -62,16 +58,14 @@ pub fn process_part2(input: &str) -> String {
     let (_, pairs) = conditional_parse(input).expect("parse should succeed");
     pairs
         .iter()
-        .map(|instruction| match instruction {
-            Instruction::Mul(x, y) => match enabled {
-                true => x * y,
-                false => 0,
-            },
-            Instruction::Enable => {
+        .map(|instruction| match (instruction, enabled) {
+            (Instruction::Mul(x, y), true) => x * y,
+            (Instruction::Mul(_, _), false) => 0,
+            (Instruction::Enable, _) => {
                 enabled = true;
                 0
             }
-            Instruction::Disable => {
+            (Instruction::Disable, _) => {
                 enabled = false;
                 0
             }
