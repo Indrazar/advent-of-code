@@ -8,7 +8,7 @@ use nom::{
     sequence::{delimited, separated_pair},
     *,
 };
-use std::{fmt::Display, iter::zip, cmp::Ordering};
+use std::{cmp::Ordering, fmt::Display, iter::zip};
 
 struct Pair {
     left: Packet,
@@ -17,11 +17,11 @@ struct Pair {
 
 impl Display for Pair {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "\nleft: {}\nright: {}", self.left, self. right)
+        write!(f, "\nleft: {}\nright: {}", self.left, self.right)
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 enum Packet {
     List(Vec<Packet>),
     Number(u32),
@@ -29,8 +29,12 @@ enum Packet {
 
 impl Display for Packet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-                Packet::List(list) => format!( "[{}]",
+        write!(
+            f,
+            "{}",
+            match self {
+                Packet::List(list) => format!(
+                    "[{}]",
                     list.iter()
                         .map(|v| v.to_string())
                         .intersperse(",".to_string())
@@ -44,92 +48,100 @@ impl Display for Packet {
 
 fn packet(input: &str) -> IResult<&str, Packet> {
     alt((
-        delimited(
-            tag("["),
-            separated_list0(tag(","), packet),
-            tag("]"),
-        )
-        .map(|vec| Packet::List(vec)),
-        nom::character::complete::u32
-            .map(|num| Packet::Number(num)),
+        delimited(tag("["), separated_list0(tag(","), packet), tag("]"))
+            .map(|vec| Packet::List(vec)),
+        nom::character::complete::u32.map(|num| Packet::Number(num)),
     ))(input)
 }
 
 fn pairs(input: &str) -> IResult<&str, Vec<Pair>> {
     separated_list1(
         tag("\n\n"),
-        separated_pair(packet, newline, packet).map(
-            |(p1, p2)| Pair {
-                left: p1,
-                right: p2,
-            },
-        ),
+        separated_pair(packet, newline, packet).map(|(p1, p2)| Pair {
+            left: p1,
+            right: p2,
+        }),
     )(input)
 }
 
-
 impl Ord for Packet {
-    fn cmp(&self, other: &Self) -> Ordering {
+    fn cmp(&self, right: &Packet) -> Ordering {
         match self {
-            Packet::List(l_list) => match other {
+            Packet::List(l_list) => match right {
                 Packet::List(r_list) => {
                     let l_len = l_list.len();
                     let r_len = r_list.len();
                     for (l, r) in zip(l_list, r_list) {
+                        //zip will only allow us to compared matched count values
                         match l.cmp(r) {
-                            Ordering::Less => return Ordering::Less,
-                            Ordering::Greater => return Ordering::Greater,
-                            Ordering::Equal => continue,
+                            Ordering::Less => {
+                                return Ordering::Less;
+                            }
+                            Ordering::Greater => {
+                                return Ordering::Greater;
+                            }
+                            Ordering::Equal => {
+                                continue;
+                            }
                         }
                     }
                     if l_len > r_len {
-                        //println!("list vs list, left longer, WRONG");
-                        return Ordering::Greater
+                        return Ordering::Greater;
+                    } else if r_len > l_len {
+                        return Ordering::Less;
+                    } else {
+                        return Ordering::Equal;
                     }
-                    else if r_len > l_len {
-                        //println!("list vs list, right longer, done");
-                        return Ordering::Less
-                    }
-                    else { return Ordering::Equal }
-                },
+                }
                 Packet::Number(r_val) => {
                     let l_len = l_list.len();
                     let r_len = 1;
-                    match Packet::List((*l_list).clone()).cmp(&Packet::List(vec![Packet::Number(*r_val)])) {
+                    match Packet::List((*l_list).clone())
+                        .cmp(&Packet::List(vec![Packet::Number(*r_val)]))
+                    {
                         Ordering::Less => return Ordering::Less,
                         Ordering::Greater => return Ordering::Greater,
                         Ordering::Equal => {
                             if l_len > r_len {
-                                //println!("list vs value, list too long, WRONG");
-                                return Ordering::Greater
-                            } else if  l_len < r_len {
-                                //println!("empty list vs value, done");
-                                return Ordering::Less
+                                return Ordering::Greater;
+                            } else if l_len < r_len {
+                                return Ordering::Less;
+                            } else {
+                                return Ordering::Equal;
                             }
-                            else { return Ordering::Equal }
-                        },
+                        }
                     }
-                },
+                }
             },
-            Packet::Number(l_val) => match other {
+            Packet::Number(l_val) => match right {
                 Packet::List(r_list) => {
-                    match (Packet::List(vec![Packet::Number(*l_val)])).cmp(&Packet::List((*r_list).clone())) {
-                        Ordering::Less => return Ordering::Less,
-                        Ordering::Greater => return Ordering::Greater,
-                        Ordering::Equal => return Ordering::Less,
+                    match (Packet::List(vec![Packet::Number(*l_val)]))
+                        .cmp(&Packet::List((*r_list).clone()))
+                    {
+                        Ordering::Less => {
+                            return Ordering::Less;
+                        }
+                        Ordering::Greater => {
+                            return Ordering::Greater;
+                        }
+                        Ordering::Equal => {
+                            if r_list.len() > 1 {
+                                return Ordering::Less;
+                            } else {
+                                return Ordering::Equal;
+                            }
+                        }
                     }
-                },
+                }
                 Packet::Number(r_val) => {
-                    //println!("l_val: {l_val}, r_val: {r_val}");
                     if l_val < r_val {
-                        //println!("left is smaller, done");
-                        return Ordering::Less }
-                    else if r_val < l_val {
-                        //println!("right is larger, WRONG");
-                        return Ordering::Greater
+                        return Ordering::Less;
+                    } else if r_val < l_val {
+                        return Ordering::Greater;
+                    } else {
+                        return Ordering::Equal;
                     }
-                    else { return Ordering::Equal }
-                },
+                }
             },
         }
     }
@@ -153,23 +165,15 @@ pub fn process_part1(input: &str) -> String {
     let (_, pair_list) = pairs(input).unwrap();
     let mut correct_count = 0;
     let mut pair_count = 1;
-    //for pair in pair_list {
-    //    print!("{}\n", pair);
-    //}
     for pair in pair_list {
         match pair.left.cmp(&pair.right) {
             Ordering::Less => {
-                //println!("{pair_count} is ordered correctly");
                 correct_count += pair_count;
-            },
+            }
             Ordering::Equal => {
-                //println!("{pair_count} is ordered correctly");
                 panic!("should not get here")
-                //correct_count += pair_count;
-            },
-            Ordering::Greater => {
-                //println!("{pair_count} is ordered incorrectly");
-            },
+            }
+            Ordering::Greater => {}
         }
         pair_count += 1;
     }
@@ -188,24 +192,23 @@ pub fn process_part2(input: &str) -> String {
     pair_list.sort();
     let mut iter = pair_list.iter();
     let mut iter2 = pair_list.iter();
-    let pos1 = iter.position(|x| *x == Packet::List(vec![Packet::List(vec![Packet::Number(2)])])).unwrap();
-    let pos2 = iter2.position(|x| *x == Packet::List(vec![Packet::List(vec![Packet::Number(6)])])).unwrap();
-    //for pair in pair_list {
-    //    println!("{pair}");
-    //}
-    ((pos1+1) * (pos2+1)).to_string()
+    let pos1 = iter
+        .position(|x| *x == Packet::List(vec![Packet::List(vec![Packet::Number(2)])]))
+        .unwrap();
+    let pos2 = iter2
+        .position(|x| *x == Packet::List(vec![Packet::List(vec![Packet::Number(6)])]))
+        .unwrap();
+    ((pos1 + 1) * (pos2 + 1)).to_string()
 }
-
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
     use super::*;
 
     #[test]
     fn test_input() {
-        let file = fs::read_to_string("./test-input-1.txt").unwrap();
-        assert_eq!(process_part1(file.as_str()), "13");
-        assert_eq!(process_part2(file.as_str()), "140");
+        let file = include_str!("../test-input-1.txt");
+        assert_eq!(process_part1(file), "13");
+        assert_eq!(process_part2(file), "140");
     }
 }
