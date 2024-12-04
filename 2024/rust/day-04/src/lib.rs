@@ -10,7 +10,6 @@ fn build_search(input: &str) -> Vec<Vec<char>> {
     word_search
 }
 
-#[cfg(debug_assertions)]
 fn build_search_and_blank_heatmap(input: &str) -> (Vec<Vec<char>>, Vec<Vec<i32>>) {
     let mut word_search: Vec<Vec<char>> = Vec::default();
     let mut heat_map: Vec<Vec<i32>> = Vec::default();
@@ -151,7 +150,26 @@ pub fn process_part1(input: &str) -> String {
 }
 
 pub fn process_part2(input: &str) -> String {
-    "works".to_string()
+    let mut count: i32 = 0;
+    let word_search = build_search(input);
+    for y in 2..word_search.len() {
+        for x in 2..word_search[0].len() {
+            let val_ul_corner = word_search[y - 2][x - 2];
+            let val_ur_corner = word_search[y - 2][x];
+            let middle = word_search[y - 1][x - 1];
+            let val_ll_corner = word_search[y][x - 2];
+            let val_lr_corner = word_search[y][x];
+            if middle == 'A'
+                && ((val_ul_corner == 'M' && val_lr_corner == 'S')
+                    || (val_ul_corner == 'S' && val_lr_corner == 'M'))
+                && ((val_ur_corner == 'M' && val_ll_corner == 'S')
+                    || (val_ur_corner == 'S' && val_ll_corner == 'M'))
+            {
+                count += 1;
+            }
+        }
+    }
+    count.to_string()
 }
 
 #[cfg(test)]
@@ -159,33 +177,83 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_input() {
-        println!("test -6");
+    fn test1_negative6() {
         let file = include_str!("../test-input--6.txt");
         assert_eq!(process_part1(file), "1");
-        println!("test -5");
+    }
+    #[test]
+    fn test1_negative5() {
         let file = include_str!("../test-input--5.txt");
         assert_eq!(process_part1(file), "1");
-        println!("test -4");
+    }
+    #[test]
+    fn test1_negative4() {
         let file = include_str!("../test-input--4.txt");
         assert_eq!(process_part1(file), "1");
-        println!("test -3");
+    }
+    #[test]
+    fn test1_negative3() {
         let file = include_str!("../test-input--3.txt");
         assert_eq!(process_part1(file), "1");
-        println!("test -2");
+    }
+    #[test]
+    fn test1_negative2() {
         let file = include_str!("../test-input--2.txt");
         assert_eq!(process_part1(file), "1");
-        println!("test -1");
+    }
+    #[test]
+    fn test1_negative1() {
         let file = include_str!("../test-input--1.txt");
         assert_eq!(process_part1(file), "1");
-        println!("test 0");
+    }
+    #[test]
+    fn test1_0() {
         let file = include_str!("../test-input-0.txt");
         assert_eq!(process_part1(file), "4");
-        println!("test 1");
+    }
+    #[test]
+    fn test1_1() {
         let file = include_str!("../test-input-1.txt");
         assert_eq!(process_part1(file), "18");
-        println!("test 2");
+    }
+    #[test]
+    fn test1_2() {
         let file = include_str!("../test-input-2.txt");
         assert_eq!(process_part1(file), "18");
+    }
+    #[test]
+    fn test2_1() {
+        let file = include_str!("../test-input-1.txt");
+        assert_eq!(process_part2(file), "9");
+    }
+    #[test]
+    fn test2_3() {
+        let file = include_str!("../test-input-3.txt");
+        assert_eq!(process_part2(file), "1");
+    }
+    #[test]
+    fn test2_4() {
+        let file = include_str!("../test-input-4.txt");
+        assert_eq!(process_part2(file), "2");
+    }
+    #[test]
+    fn test2_5() {
+        let file = include_str!("../test-input-5.txt");
+        assert_eq!(process_part2(file), "1");
+    }
+    #[test]
+    fn test2_6() {
+        let file = include_str!("../test-input-6.txt");
+        assert_eq!(process_part2(file), "1");
+    }
+    #[test]
+    fn test2_7() {
+        let file = include_str!("../test-input-7.txt");
+        assert_eq!(process_part2(file), "4");
+    }
+    #[test]
+    fn test2_8() {
+        let file = include_str!("../test-input-8.txt");
+        assert_eq!(process_part2(file), "9")
     }
 }
