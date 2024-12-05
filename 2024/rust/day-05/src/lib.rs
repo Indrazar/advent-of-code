@@ -6,7 +6,7 @@ use nom::{
     sequence::{delimited, separated_pair},
     IResult, Parser,
 };
-use std::{cmp::Ordering, collections::HashMap, hash::Hash};
+use std::{collections::HashMap, hash::Hash};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Pair {
@@ -127,7 +127,7 @@ fn is_before(left: i32, right: i32, rules: &PairRules, seen_values: &Vec<i32>) -
     panic!("should never get here");
 }
 
-fn check_rules(update: &Vec<i32>, rules: &PairRules) -> bool {
+fn check_rule(update: &Vec<i32>, rules: &PairRules) -> bool {
     let mut seen_values: Vec<i32> = Vec::new();
     for pair in update.windows(2) {
         if !is_before(pair[0], pair[1], rules, &seen_values) {
@@ -142,7 +142,7 @@ pub fn process_part1(input: &str) -> String {
     let mut middle_page_sum = 0;
     let (_, (rules, updates)) = parse(input).expect("parse should succeed");
     for update in updates {
-        if check_rules(&update, &rules) {
+        if check_rule(&update, &rules) {
             if update.len() % 2 != 1 {
                 panic!("update lengths need to be odd")
             } else {
@@ -158,8 +158,49 @@ pub fn process_part1(input: &str) -> String {
     middle_page_sum.to_string()
 }
 
+fn get_middle_of_correctly_sorted(update: &Vec<i32>, rules: &PairRules) -> i32 {
+    let mut update = update.clone();
+    let mut swap_counter = 0;
+    let mut seen_values: Vec<i32> = Vec::new();
+    while (!check_rule(&update, rules)) && (swap_counter < update.len() * update.len()) {
+        for i in 1..update.len() {
+            if !is_before(update[i - 1], update[i], rules, &seen_values) {
+                let left = update[i - 1];
+                let right = update[i];
+                //println!("swapping {left} and {right}");
+                update[i - 1] = right;
+                update[i] = left;
+                break;
+            } else {
+                seen_values.push(update[i - 1]);
+            }
+        }
+        swap_counter += 1;
+    }
+    if swap_counter < update.len() * update.len() {
+        return update[update.len() / 2];
+    } else {
+        dbg!(update);
+        dbg!(swap_counter);
+        dbg!(seen_values);
+        panic!("hit swap limit")
+    }
+}
+
 pub fn process_part2(input: &str) -> String {
-    "works".to_string()
+    let mut middle_page_sum = 0;
+    let (_, (rules, updates)) = parse(input).expect("parse should succeed");
+    for update in updates {
+        if !check_rule(&update, &rules) {
+            if update.len() % 2 != 1 {
+                panic!("update lists need to be odd lengths")
+            } else {
+                middle_page_sum += get_middle_of_correctly_sorted(&update, &rules)
+            }
+        } else {
+        }
+    }
+    middle_page_sum.to_string()
 }
 
 #[cfg(test)]
@@ -170,5 +211,6 @@ mod tests {
     fn test_input() {
         let file = include_str!("../test-input-1.txt");
         assert_eq!(process_part1(file), "143");
+        assert_eq!(process_part2(file), "123");
     }
 }
