@@ -1,9 +1,8 @@
 use nom::{
-    bytes::complete::{tag, take, take_until},
-    character::complete::{self, anychar},
-    error::Error,
+    bytes::complete::tag,
+    character::complete::{self, anychar, line_ending},
     multi::{many1, many_till, separated_list1},
-    sequence::{delimited, separated_pair},
+    sequence::{delimited, preceded, separated_pair, terminated},
     IResult, Parser,
 };
 use std::{collections::HashMap, hash::Hash};
@@ -36,11 +35,12 @@ fn parse_rules(input: &str) -> IResult<&str, PairRules> {
         find_second: HashMap::new(),
         find_first: HashMap::new(),
     };
-    let (_, pairs): (_, Vec<Pair>) =
+    let (input, pairs): (_, Vec<Pair>) =
         many1(many_till(anychar, parse_page_pair).map(|(_, (a, b))| Pair {
             first: a,
             second: b,
-        }))(input)?;
+        }))(input)
+        .expect("parse should succeed");
     for pair in pairs {
         match rules.find_first.get(&pair.second) {
             Some(vec) => {
@@ -66,22 +66,15 @@ fn parse_rules(input: &str) -> IResult<&str, PairRules> {
     Ok((input, rules))
 }
 
-fn parse_single_update(input: &str) -> IResult<&str, Vec<i32>> {
-    let (input, vec) = separated_list1(tag(","), complete::i32)(input)?;
-    Ok((input, vec))
-}
-
 fn parse_updates(input: &str) -> IResult<&str, Updates> {
-    separated_list1(tag("\n"), parse_single_update)(input)
+    separated_list1(line_ending, separated_list1(tag(","), complete::i32))(input)
 }
 
 fn parse(input: &str) -> IResult<&str, (PairRules, Updates)> {
-    let (update_input, rules_input) =
-        take_until::<_, _, Error<_>>("\n\n")(input).expect("there should be 2 line breaks");
-    let (_, rules) = parse_rules(rules_input)?;
-    let (update_input, _) = take(2usize)(update_input)?; // remove the first 2 \n\n characters
-    let (_, updates) = parse_updates(update_input)?;
-    Ok(("", (rules, updates)))
+    let (input, rules) = terminated(parse_rules, line_ending)(input).expect("parse should succeed");
+    let (input, updates) =
+        preceded(line_ending, parse_updates)(input).expect("parse should succeed");
+    Ok((input, (rules, updates)))
 }
 
 fn is_before(left: i32, right: i32, rules: &PairRules) -> bool {
@@ -136,7 +129,6 @@ fn get_middle_of_correctly_sorted(update: &Vec<i32>, rules: &PairRules) -> i32 {
     while (!check_rule(&update, rules)) && (swap_counter < swap_limit) {
         for i in 1..update.len() {
             if !is_before(update[i - 1], update[i], rules) {
-                //println!("swapping {left} and {right}");
                 update.swap(i - 1, i);
                 break;
             } else {
