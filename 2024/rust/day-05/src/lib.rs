@@ -22,12 +22,7 @@ struct PairRules {
 type Updates = Vec<Vec<i32>>;
 
 fn parse_page_pair(input: &str) -> IResult<&str, (i32, i32)> {
-    let (input, (a, b)) = delimited(
-        tag(""),
-        separated_pair(complete::i32, tag("|"), complete::i32),
-        tag(""),
-    )(input)?;
-    Ok((input, (a, b)))
+    separated_pair(complete::i32, tag("|"), complete::i32)(input)
 }
 
 fn parse_rules(input: &str) -> IResult<&str, PairRules> {
@@ -70,11 +65,10 @@ fn parse_updates(input: &str) -> IResult<&str, Updates> {
     separated_list1(line_ending, separated_list1(tag(","), complete::i32))(input)
 }
 
-fn parse(input: &str) -> IResult<&str, (PairRules, Updates)> {
+fn parse(input: &str) -> (PairRules, Updates) {
     let (input, rules) = terminated(parse_rules, line_ending)(input).expect("parse should succeed");
-    let (input, updates) =
-        preceded(line_ending, parse_updates)(input).expect("parse should succeed");
-    Ok((input, (rules, updates)))
+    let (_, updates) = preceded(line_ending, parse_updates)(input).expect("parse should succeed");
+    (rules, updates)
 }
 
 fn is_before(left: i32, right: i32, rules: &PairRules) -> bool {
@@ -108,7 +102,7 @@ fn check_rule(update: &Vec<i32>, rules: &PairRules) -> bool {
 
 pub fn process_part1(input: &str) -> String {
     let mut middle_page_sum = 0;
-    let (_, (rules, updates)) = parse(input).expect("parse should succeed");
+    let (rules, updates) = parse(input);
     for update in updates {
         if check_rule(&update, &rules) {
             if update.len() % 2 != 1 {
@@ -147,7 +141,7 @@ fn get_middle_of_correctly_sorted(update: &Vec<i32>, rules: &PairRules) -> i32 {
 
 pub fn process_part2(input: &str) -> String {
     let mut middle_page_sum = 0;
-    let (_, (rules, updates)) = parse(input).expect("parse should succeed");
+    let (rules, updates) = parse(input);
     for update in updates {
         if !check_rule(&update, &rules) {
             if update.len() % 2 != 1 {
