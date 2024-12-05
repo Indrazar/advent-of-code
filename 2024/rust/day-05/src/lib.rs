@@ -84,56 +84,31 @@ fn parse(input: &str) -> IResult<&str, (PairRules, Updates)> {
     Ok(("", (rules, updates)))
 }
 
-fn is_before(left: i32, right: i32, rules: &PairRules, seen_values: &Vec<i32>) -> bool {
+fn is_before(left: i32, right: i32, rules: &PairRules) -> bool {
     match rules.find_second.get(&left) {
         Some(vec) => {
-            for page in vec {
-                if *page == right {
-                    //println!("left: {left}, right: {right}: find_second, less");
-                    return true;
-                }
+            if vec.contains(&right) {
+                return true;
             }
         }
         None => {}
     }
     match rules.find_first.get(&right) {
         Some(vec) => {
-            for page in vec {
-                if *page == left {
-                    //println!("left: {left}, right: {right}: find_first, less");
-                    return true;
-                }
+            if vec.contains(&left) {
+                return true;
             }
         }
         None => {}
     }
-    //println!("left: {left}, right: {right}: idk lol");
-    let mut seen_values_backwards = seen_values.clone();
-    seen_values_backwards.reverse();
-    let mut seen_values_reduced = seen_values.clone();
-    let last_lookup = match seen_values_reduced.pop() {
-        Some(val) => val,
-        None => {
-            //println!("left: {left}, right: {right}: out of values to pop: false");
-            return false;
-        }
-    };
-    for value in seen_values_backwards {
-        if !is_before(last_lookup, value, rules, &seen_values_reduced) {
-            //println!("iterating backwards recursively found that last_lookup: {last_lookup} was after value: {value}");
-            return false;
-        }
-    }
-    panic!("should never get here");
+    return false;
 }
 
 fn check_rule(update: &Vec<i32>, rules: &PairRules) -> bool {
-    let mut seen_values: Vec<i32> = Vec::new();
     for pair in update.windows(2) {
-        if !is_before(pair[0], pair[1], rules, &seen_values) {
+        if !is_before(pair[0], pair[1], rules) {
             return false;
         }
-        seen_values.push(pair[0]);
     }
     true
 }
@@ -146,10 +121,6 @@ pub fn process_part1(input: &str) -> String {
             if update.len() % 2 != 1 {
                 panic!("update lengths need to be odd")
             } else {
-                //println!(
-                //    "we have found a valid update, middle value is: {}",
-                //    update[update.len() / 2]
-                //);
                 middle_page_sum += update[update.len() / 2]
             }
         } else {
@@ -161,28 +132,23 @@ pub fn process_part1(input: &str) -> String {
 fn get_middle_of_correctly_sorted(update: &Vec<i32>, rules: &PairRules) -> i32 {
     let mut update = update.clone();
     let mut swap_counter = 0;
-    let mut seen_values: Vec<i32> = Vec::new();
-    while (!check_rule(&update, rules)) && (swap_counter < update.len() * update.len()) {
+    let swap_limit = update.len() * update.len();
+    while (!check_rule(&update, rules)) && (swap_counter < swap_limit) {
         for i in 1..update.len() {
-            if !is_before(update[i - 1], update[i], rules, &seen_values) {
-                let left = update[i - 1];
-                let right = update[i];
+            if !is_before(update[i - 1], update[i], rules) {
                 //println!("swapping {left} and {right}");
-                update[i - 1] = right;
-                update[i] = left;
+                update.swap(i - 1, i);
                 break;
             } else {
-                seen_values.push(update[i - 1]);
             }
         }
         swap_counter += 1;
     }
-    if swap_counter < update.len() * update.len() {
+    if swap_counter < swap_limit {
         return update[update.len() / 2];
     } else {
         dbg!(update);
         dbg!(swap_counter);
-        dbg!(seen_values);
         panic!("hit swap limit")
     }
 }
