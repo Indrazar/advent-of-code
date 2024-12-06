@@ -240,9 +240,29 @@ pub fn process_part1(input: &str) -> String {
 pub fn process_part2(input: &str) -> String {
     let map = parse(input);
     //print_map(&map);
+    let mut visit_map = map.clone();
+    let mut check: EndType = iterate_guard_once(&mut visit_map);
+    while check == EndType::StepComplete {
+        check = iterate_guard_once(&mut visit_map);
+    }
+    match check {
+        EndType::LeftMap => {}
+        EndType::LoopFound => {
+            //print_map(&map);
+            panic!("we found a loop")
+        }
+        EndType::StepComplete => {
+            //print_map(&map);
+            panic!("shouldn't get here")
+        }
+    }
+
     let mut loops_created = 0;
     for y in 0..map.map.len() {
         for x in 0..map.map[y].len() {
+            if !visit_map.map[y][x].visited {
+                continue;
+            }
             let mut trial_map = map.clone();
             match trial_map.map[y][x].tile_type {
                 Tile::Clear => trial_map.map[y][x].tile_type = Tile::Obstructed,
