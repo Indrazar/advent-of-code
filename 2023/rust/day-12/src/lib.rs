@@ -103,71 +103,73 @@ fn determine_variations(tiles: &Vec<Tile>, constraints: &Vec<u64>) -> u64 {
     let mut tiles = tiles.clone();
     tiles.push(Tile::Operational);
 
-    let tile_count = tiles.len();
-    let constraint_count = constraints.len();
+    let tile_count = tiles.len(); //n
+    let constraint_count = constraints.len(); //m
     let mut dp: Vec<Vec<Vec<Option<u64>>>> =
         vec![vec![vec![None; max_run + 1usize]; constraint_count]; tile_count];
-    for i in 0..tile_count {
-        let x = tiles[i];
-        let mut ans_dot: Option<u64> = None;
-        let mut ans_pound: Option<u64> = None;
-        for j in 0..constraint_count {
-            for k in 0..((constraints[j] + 1) as usize) {
-                if i == 0 {
-                    if j != 0 {
-                        dp[i][j][k] = Some(0);
+    for current_tile in 0..tile_count {
+        let x = tiles[current_tile];
+        let mut combinations_if_current_operational: Option<u64> = None;
+        let mut combinations_if_current_is_damaged: Option<u64> = None;
+        for current_run in 0..constraint_count {
+            for current_damaged_count in 0..((constraints[current_run] + 1) as usize) {
+                if current_tile == 0 {
+                    if current_run != 0 {
+                        dp[current_tile][current_run][current_damaged_count] = Some(0);
                         continue;
                     } else {
                         match x {
                             Tile::Damaged => {
-                                if k != 1 {
-                                    dp[i][j][k] = Some(0);
+                                if current_damaged_count != 1 {
+                                    dp[current_tile][current_run][current_damaged_count] = Some(0);
                                     continue;
                                 } else {
-                                    dp[i][j][k] = Some(1);
+                                    dp[current_tile][current_run][current_damaged_count] = Some(1);
                                     continue;
                                 }
                             }
                             Tile::Operational => {
-                                if k != 0 {
-                                    dp[i][j][k] = Some(0);
+                                if current_damaged_count != 0 {
+                                    dp[current_tile][current_run][current_damaged_count] = Some(0);
                                     continue;
                                 } else {
-                                    dp[i][j][k] = Some(1);
+                                    dp[current_tile][current_run][current_damaged_count] = Some(1);
                                     continue;
                                 }
                             }
                             Tile::Unknown => {
-                                if k != 1 && k != 0 {
-                                    dp[i][j][k] = Some(0);
+                                if current_damaged_count != 1 && current_damaged_count != 0 {
+                                    dp[current_tile][current_run][current_damaged_count] = Some(0);
                                     continue;
                                 } else {
-                                    dp[i][j][k] = Some(1);
+                                    dp[current_tile][current_run][current_damaged_count] = Some(1);
                                     continue;
                                 }
                             }
                         }
                     }
                 }
-                if k != 0 {
-                    ans_dot = Some(0);
-                } else if j > 0 {
-                    if k != 0 {
+                if current_damaged_count != 0 {
+                    combinations_if_current_operational = Some(0);
+                } else if current_run > 0 {
+                    if current_damaged_count != 0 {
                         panic!("k must be 0")
                     } else {
-                        ans_dot = Some(
-                            dp[i - 1][j - 1][constraints[j - 1] as usize]
+                        combinations_if_current_operational = Some(
+                            dp[current_tile - 1][current_run - 1]
+                                [constraints[current_run - 1] as usize]
                                 .expect("should have a value"),
                         );
-                        ans_dot = Some(
-                            ans_dot.expect("should have a value")
-                                + dp[i - 1][j][0].expect("should have a value"),
+                        combinations_if_current_operational = Some(
+                            combinations_if_current_operational.expect("should have a value")
+                                + dp[current_tile - 1][current_run][0]
+                                    .expect("should have a value"),
                         );
                     }
                 } else {
-                    // i > 0, j=0, k=0
+                    // current tile > 0, run=0, damaged=0
                     // only possibility is every unknown is operational
-                    ans_dot = if *(&tiles[0..i]
+                    combinations_if_current_operational = if *(&tiles[0..current_tile]
                         .iter()
                         .map(|val| if *val == Tile::Damaged { 1 } else { 0 })
                         .sum::<u64>())
@@ -178,54 +180,35 @@ fn determine_variations(tiles: &Vec<Tile>, constraints: &Vec<u64>) -> u64 {
                         Some(0)
                     };
                 }
-                if k == 0 {
-                    ans_pound = Some(0);
+                if current_damaged_count == 0 {
+                    combinations_if_current_is_damaged = Some(0);
                 } else {
-                    ans_pound = dp[i - 1][j][k - 1];
+                    combinations_if_current_is_damaged =
+                        dp[current_tile - 1][current_run][current_damaged_count - 1];
                 }
 
                 match x {
                     Tile::Operational => {
-                        dp[i][j][k] = Some(ans_dot.expect("should have a value"));
+                        dp[current_tile][current_run][current_damaged_count] =
+                            Some(combinations_if_current_operational.expect("should have a value"));
                     }
                     Tile::Damaged => {
-                        dp[i][j][k] = Some(ans_pound.expect("should have a value"));
+                        dp[current_tile][current_run][current_damaged_count] =
+                            Some(combinations_if_current_is_damaged.expect("should have a value"));
                     }
                     Tile::Unknown => {
-                        dp[i][j][k] = Some(
-                            ans_dot.expect("should have a value")
-                                + ans_pound.expect("should have a value"),
+                        dp[current_tile][current_run][current_damaged_count] = Some(
+                            combinations_if_current_operational.expect("should have a value")
+                                + combinations_if_current_is_damaged.expect("should have a value"),
                         );
                     }
                 }
             }
         }
     }
+    // dp[last tile][last run][no damaged]
+    // we added an extra no damaged at the end so it's the total combinations
     let ans = dp[tile_count - 1][dp[tile_count - 1].len() - 1][0];
-    // for i in 0..dp.len() {
-    //     println!("array {i}: \n");
-    //     for j in 0..dp[i].len() {
-    //         for k in 0..dp[i][j].len() {
-    //             let opt = dp[i][j][k];
-    //             match opt {
-    //                 Some(val) => print!("{val} "),
-    //                 None => print!("N "),
-    //             }
-    //         }
-    //         print!("\n")
-    //     }
-    // }
-    // println!(
-    //     "3d array lengths: {}, {}, {}",
-    //     dp.len(),
-    //     dp[0].len(),
-    //     dp[0][0].len()
-    // );
-    // println!(
-    //     "indexes: 1:{} 2:{} 3:0",
-    //     tile_count - 1,
-    //     dp[tile_count - 1].len() - 1
-    // );
     return ans.expect("this should have a value");
 }
 
@@ -272,15 +255,7 @@ fn process_line2(input: &str) -> u64 {
     for val in constraint_iter {
         constraints_string = format!("{constraints_string}, {val}");
     }
-    // let mut unknowns = 0;
-    // for x in group.iter() {
-    //     match x {
-    //         Tile::Unknown => unknowns += 1,
-    //         _ => {}
-    //     }
-    // }
     let res = determine_variations(&group, &constraints);
-    //println!("{group_string} {constraints_string}, unkowns: {unknowns}, answer: {res}");
     res
 }
 
