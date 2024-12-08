@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 
 [dev-dependencies]
-divan = "0.1.7"
+divan = "0.1.17"
 
 [[bench]]
 name = "day-00-bench"

@@ -36,7 +36,6 @@ fn insert_antenna(antenna_list: &mut HashMap<char, Vec<Coord>>, x: usize, y: usi
 }
 
 fn parse(input: &str) -> MapData {
-    //let mut map = HashMap::new();
     let mut antenna_list: HashMap<char, Vec<Coord>> = HashMap::new();
     for (y, line) in input.lines().enumerate() {
         for (x, c) in line.chars().enumerate() {
@@ -58,7 +57,6 @@ fn parse(input: &str) -> MapData {
         .try_into()
         .unwrap();
     MapData {
-        //map,
         antenna_list,
         width,
         height,
@@ -116,7 +114,7 @@ fn generate_candidates(
         candidates
     } else {
         let max_magnitude: i64 = width.max(height);
-        for magnitude in (max_magnitude * -1)..max_magnitude {
+        for magnitude in -max_magnitude..max_magnitude {
             let (candidate1, candidate2) = get_pair(antenna1, antenna2, magnitude);
             if candidate1.x < width
                 && candidate1.x >= 0
@@ -161,7 +159,7 @@ fn print_map(height: i64, width: i64, input: &Vec<Coord>) {
                 print!("{count}");
             }
         }
-        print!("\n");
+        println!();
     }
 }
 
