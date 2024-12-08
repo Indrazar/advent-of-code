@@ -18,15 +18,15 @@ struct LineOperator {
 
 impl LineOperator {
     fn new(length: usize) -> LineOperator {
-        return LineOperator {
+        LineOperator {
             state: vec![Operators::Add; length - 1],
-        };
+        }
     }
     fn from(input: &LineData) -> LineOperator {
         let length = input.inputs.len() - 1;
-        return LineOperator {
+        LineOperator {
             state: vec![Operators::Add; length],
-        };
+        }
     }
     fn inc_state(&mut self) {
         for i in 0..self.state.len() {
@@ -67,36 +67,32 @@ impl LineOperator {
         }
     }
     fn test_state(&self, input: &LineData) -> bool {
-        if input.inputs.len() < 1 {
+        if input.inputs.is_empty() {
             panic!("input length is too small");
         }
         let target = input.target;
         let mut acc = input.inputs[0];
         for i in 1..input.inputs.len() {
             match self.state[i - 1] {
-                Operators::Add => acc = acc + input.inputs[i],
-                Operators::Multiply => acc = acc * input.inputs[i],
+                Operators::Add => acc += input.inputs[i],
+                Operators::Multiply => acc *= input.inputs[i],
                 Operators::Concatenate => {
                     panic!("part 1 does not support concatenate")
                 }
             }
         }
-        if acc == target {
-            true
-        } else {
-            false
-        }
+        acc == target
     }
     fn test_state2(&self, input: &LineData) -> bool {
-        if input.inputs.len() < 1 {
+        if input.inputs.is_empty() {
             panic!("input length is too small");
         }
         let target = input.target;
         let mut acc = input.inputs[0];
         for i in 1..input.inputs.len() {
             match self.state[i - 1] {
-                Operators::Add => acc = acc + input.inputs[i],
-                Operators::Multiply => acc = acc * input.inputs[i],
+                Operators::Add => acc += input.inputs[i],
+                Operators::Multiply => acc *= input.inputs[i],
                 Operators::Concatenate => {
                     acc = (format!("{acc}{}", input.inputs[i]))
                         .parse()
@@ -104,11 +100,7 @@ impl LineOperator {
                 }
             }
         }
-        if acc == target {
-            true
-        } else {
-            false
-        }
+        acc == target
     }
 }
 
@@ -117,8 +109,8 @@ fn parse_line(input: &str) -> LineData {
     let mut inputs: Vec<i64> = Vec::new();
     let target: i64 = cleaved[0].parse().expect("parse should succeed");
     let input_str: Vec<&str> = cleaved[1].split(' ').collect();
-    for i in 1..input_str.len() {
-        inputs.push(input_str[i].parse().expect("parse should succeed"));
+    for i in input_str.iter().skip(1) {
+        inputs.push(i.parse().expect("parse should succeed"));
     }
     //println!("new line parsed target: {target}, inputs: {inputs:?}");
     LineData { target, inputs }
@@ -147,7 +139,7 @@ fn solve_line_data(input: LineData) -> i64 {
         iterations += 1;
     }
     if correct_equations > 0 {
-        return input.target;
+        input.target
     } else {
         0
     }
@@ -184,7 +176,7 @@ fn solve_line_data2(input: LineData) -> i64 {
         iterations += 1;
     }
     if correct_equations > 0 {
-        return input.target;
+        input.target
     } else {
         0
     }
