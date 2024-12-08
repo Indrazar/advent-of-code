@@ -8,10 +8,31 @@ struct Coord {
 
 #[derive(Debug, Clone)]
 struct MapData {
-    //map: HashMap<Coord, char>,
     antenna_list: HashMap<char, Vec<Coord>>,
     width: i64,
     height: i64,
+}
+
+fn insert_antenna(antenna_list: &mut HashMap<char, Vec<Coord>>, x: usize, y: usize, c: char) {
+    match antenna_list.get(&c) {
+        Some(vec) => {
+            let mut vec = vec.clone();
+            vec.push(Coord {
+                x: x.try_into().unwrap(),
+                y: y.try_into().unwrap(),
+            });
+            antenna_list.insert(c, vec);
+        }
+        None => {
+            antenna_list.insert(
+                c,
+                vec![Coord {
+                    x: x.try_into().unwrap(),
+                    y: y.try_into().unwrap(),
+                }],
+            );
+        }
+    }
 }
 
 fn parse(input: &str) -> MapData {
@@ -22,32 +43,7 @@ fn parse(input: &str) -> MapData {
             match c {
                 '.' => continue,
                 _ => {
-                    // map.insert(
-                    //     Coord {
-                    //         x: x.try_into().unwrap(),
-                    //         y: y.try_into().unwrap(),
-                    //     },
-                    //     c,
-                    // );
-                    match antenna_list.get(&c) {
-                        Some(vec) => {
-                            let mut vec = vec.clone();
-                            vec.push(Coord {
-                                x: x.try_into().unwrap(),
-                                y: y.try_into().unwrap(),
-                            });
-                            antenna_list.insert(c, vec);
-                        }
-                        None => {
-                            antenna_list.insert(
-                                c,
-                                vec![Coord {
-                                    x: x.try_into().unwrap(),
-                                    y: y.try_into().unwrap(),
-                                }],
-                            );
-                        }
-                    }
+                    insert_antenna(&mut antenna_list, x, y, c);
                 }
             }
         }
@@ -84,122 +80,15 @@ fn generate_coord_pairs(data: &MapData) -> Vec<(Coord, Coord)> {
 fn get_pair(antenna1: Coord, antenna2: Coord, magnitude: i64) -> (Coord, Coord) {
     let antenna_x_diff = (antenna1.x - antenna2.x) * magnitude;
     let antenna_y_diff = (antenna1.y - antenna2.y) * magnitude;
-    match (antenna_x_diff.signum(), antenna_y_diff.signum()) {
-        (-1, -1) => {
-            // antenna 2 down and to the right
-            let candidate1: Coord = Coord {
-                x: antenna2.x - antenna_x_diff,
-                y: antenna2.y - antenna_y_diff,
-            };
-            let candidate2: Coord = Coord {
-                x: antenna1.x + antenna_x_diff,
-                y: antenna1.y + antenna_y_diff,
-            };
-            return (candidate1, candidate2);
-        }
-        (-1, 0) => {
-            // antenna 2 to the right
-            let candidate1: Coord = Coord {
-                x: antenna2.x - antenna_x_diff,
-                y: antenna2.y,
-            };
-            let candidate2: Coord = Coord {
-                x: antenna1.x + antenna_x_diff,
-                y: antenna1.y,
-            };
-            return (candidate1, candidate2);
-        }
-        (-1, 1) => {
-            // antenna 2 to the right and up
-            let candidate1: Coord = Coord {
-                x: antenna2.x - antenna_x_diff,
-                y: antenna2.y - antenna_y_diff,
-            };
-            let candidate2: Coord = Coord {
-                x: antenna1.x + antenna_x_diff,
-                y: antenna1.y + antenna_y_diff,
-            };
-            return (candidate1, candidate2);
-        }
-        (0, -1) => {
-            // antenna 2 up
-            let candidate1: Coord = Coord {
-                x: antenna2.x,
-                y: antenna2.y - antenna_y_diff,
-            };
-            let candidate2: Coord = Coord {
-                x: antenna1.x,
-                y: antenna1.y + antenna_y_diff,
-            };
-            return (candidate1, candidate2);
-        }
-        (0, 0) => {
-            if magnitude != 0 {
-                panic!("antennas cannot be on top of each other")
-            } else {
-                let candidate1: Coord = Coord {
-                    x: antenna2.x,
-                    y: antenna2.y,
-                };
-                let candidate2: Coord = Coord {
-                    x: antenna1.x,
-                    y: antenna1.y,
-                };
-                return (candidate1, candidate2);
-            }
-        }
-        (0, 1) => {
-            // antenna 2 above
-            let candidate1: Coord = Coord {
-                x: antenna2.x,
-                y: antenna2.y - antenna_y_diff,
-            };
-            let candidate2: Coord = Coord {
-                x: antenna1.x,
-                y: antenna1.y + antenna_y_diff,
-            };
-            return (candidate1, candidate2);
-        }
-        (1, -1) => {
-            // antenna 2 to the left and down
-            let candidate1: Coord = Coord {
-                x: antenna2.x - antenna_x_diff,
-                y: antenna2.y - antenna_y_diff,
-            };
-            let candidate2: Coord = Coord {
-                x: antenna1.x + antenna_x_diff,
-                y: antenna1.y + antenna_y_diff,
-            };
-            return (candidate1, candidate2);
-        }
-        (1, 0) => {
-            // antenna 2 to the left
-            let candidate1: Coord = Coord {
-                x: antenna2.x - antenna_x_diff,
-                y: antenna2.y,
-            };
-            let candidate2: Coord = Coord {
-                x: antenna1.x + antenna_x_diff,
-                y: antenna1.y,
-            };
-            return (candidate1, candidate2);
-        }
-        (1, 1) => {
-            // antenna 2 to the left and above
-            let candidate1: Coord = Coord {
-                x: antenna2.x + antenna_x_diff,
-                y: antenna2.y + antenna_y_diff,
-            };
-            let candidate2: Coord = Coord {
-                x: antenna1.x - antenna_x_diff,
-                y: antenna1.y - antenna_y_diff,
-            };
-            return (candidate1, candidate2);
-        }
-        _ => {
-            panic!("signum() returned an invalid value")
-        }
-    }
+    let candidate1: Coord = Coord {
+        x: antenna2.x - antenna_x_diff,
+        y: antenna2.y - antenna_y_diff,
+    };
+    let candidate2: Coord = Coord {
+        x: antenna1.x + antenna_x_diff,
+        y: antenna1.y + antenna_y_diff,
+    };
+    (candidate1, candidate2)
 }
 
 fn generate_candidates(
