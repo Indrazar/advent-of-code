@@ -81,6 +81,7 @@ pub fn process_part2(input: &str) -> String {
     for stone in stones {
         sum += determine_trajectory(stone, 75, &mut trajectory_map);
     }
+    //println!("items in map: {}", trajectory_map.keys().len());
     sum.to_string()
 }
 
