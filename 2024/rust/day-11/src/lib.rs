@@ -6,6 +6,36 @@ use nom::{
     IResult, Parser,
 };
 
+enum StoneGroup {
+    One(u64),
+    Two((u64, u64)),
+}
+
+impl StoneGroup {
+    fn len(&self) -> usize {
+        match self {
+            StoneGroup::One(_) => 1,
+            StoneGroup::Two(_) => 2,
+        }
+    }
+}
+
+fn iterate_stones_fast(input: u64) -> StoneGroup {
+    if input == 0 {
+        return StoneGroup::One(1);
+    }
+    let stone_str = input.to_string();
+    if stone_str.len() % 2 == 0 {
+        let (first, last) = stone_str.split_at(stone_str.len() / 2);
+        return StoneGroup::Two((
+            first.parse().expect("should be a number"),
+            last.parse().expect("should be a number"),
+        ));
+    } else {
+        StoneGroup::One(input * 2024)
+    }
+}
+
 fn iterate_stones(input: Vec<u64>) -> Vec<u64> {
     let mut new: Vec<u64> = Vec::with_capacity(input.len() * 2);
     for stone in input.iter() {
@@ -45,11 +75,10 @@ pub fn process_part1(input: &str) -> String {
 fn determine_trajectory(input: u64, generations: u64, map: &mut HashMap<(u64, u64), u64>) -> u64 {
     if generations == 1 {
         // take current stone, iterate one generation, add to map
-        let single_stone = vec![input];
-        let stone_up_to_pair = iterate_stones(single_stone);
         match map.get(&(input, generations)) {
             Some(val) => *val,
             None => {
+                let stone_up_to_pair = iterate_stones_fast(input);
                 map.insert((input, generations), stone_up_to_pair.len() as u64);
                 stone_up_to_pair.len() as u64
             }
@@ -59,11 +88,16 @@ fn determine_trajectory(input: u64, generations: u64, map: &mut HashMap<(u64, u6
         match map.get(&(input, generations)) {
             Some(val) => *val,
             None => {
-                let single_stone = vec![input];
-                let stone_up_to_pair = iterate_stones(single_stone);
+                let stone_up_to_pair = iterate_stones_fast(input);
                 let mut sum: u64 = 0;
-                for stone in stone_up_to_pair {
-                    sum += determine_trajectory(stone, generations - 1, map);
+                match stone_up_to_pair {
+                    StoneGroup::One(s1) => {
+                        sum += determine_trajectory(s1, generations - 1, map);
+                    }
+                    StoneGroup::Two((s1, s2)) => {
+                        sum += determine_trajectory(s1, generations - 1, map);
+                        sum += determine_trajectory(s2, generations - 1, map);
+                    }
                 }
                 //println!("found {sum} stones from a {input} stone after {generations} generations");
                 map.insert((input, generations), sum);
