@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::{stdin, stdout, Write};
 
 use nom::{
     branch::alt,
@@ -46,7 +47,7 @@ fn parse(input: &str) -> Vec<RobotData> {
     data
 }
 
-fn print_map(data: HashMap<Coord, i64>, width: i64, height: i64) {
+fn print_map(data: &HashMap<Coord, i64>, width: i64, height: i64) {
     let mut asterisks: Vec<(Coord, i64)> = Vec::new();
     println!("current map:");
     for y in 0..height {
@@ -72,7 +73,12 @@ fn print_map(data: HashMap<Coord, i64>, width: i64, height: i64) {
     }
 }
 
-fn process_map(width: i64, height: i64, data: Vec<RobotData>, iterations: i64) -> String {
+fn iterate_x_times(
+    data: &Vec<RobotData>,
+    width: i64,
+    height: i64,
+    iterations: i64,
+) -> HashMap<Coord, i64> {
     let mut new_data = data.clone();
     for _ in 0..iterations {
         for robot in new_data.iter_mut() {
@@ -102,7 +108,16 @@ fn process_map(width: i64, height: i64, data: Vec<RobotData>, iterations: i64) -
             }
         }
     }
-    let robot_map = robot_map;
+    robot_map
+}
+
+fn count_quadrants_after_iterations(
+    width: i64,
+    height: i64,
+    data: Vec<RobotData>,
+    iterations: i64,
+) -> String {
+    let robot_map = iterate_x_times(&data, width, height, iterations);
     let vertical_divider_inclusive = width % 2 == 0;
     let horizontal_divider_inclusive = height % 2 == 0;
     let vertical_edge = width / 2;
@@ -187,10 +202,82 @@ fn process_map(width: i64, height: i64, data: Vec<RobotData>, iterations: i64) -
 pub fn process_part1(input: &str) -> String {
     let data = parse(input);
     //println!("{data:?}");
-    process_map(101, 103, data, 100)
+    count_quadrants_after_iterations(101, 103, data, 100)
+}
+
+fn iterate_x_times_stack_check(
+    data: &Vec<RobotData>,
+    width: i64,
+    height: i64,
+    iterations: i64,
+) -> (Vec<RobotData>, bool) {
+    let mut new_data = data.clone();
+    for _ in 0..iterations {
+        for robot in new_data.iter_mut() {
+            robot.postion.x += robot.velocity.x;
+            robot.postion.y += robot.velocity.y;
+            if robot.postion.x < 0 {
+                robot.postion.x += width;
+            } else if robot.postion.x >= width {
+                robot.postion.x -= width;
+            }
+            if robot.postion.y < 0 {
+                robot.postion.y += height;
+            } else if robot.postion.y >= height {
+                robot.postion.y -= height;
+            }
+        }
+    }
+    // build map of robots
+    let mut stack_check = true;
+    let mut robot_map: HashMap<Coord, i64> = HashMap::new();
+    for robot in &new_data {
+        if stack_check {
+            match robot_map.get_mut(&robot.postion) {
+                Some(val) => {
+                    *val += 1;
+                    stack_check = false;
+                }
+                None => {
+                    robot_map.insert(robot.postion, 1);
+                }
+            }
+        }
+    }
+    (new_data, stack_check)
 }
 
 pub fn process_part2(input: &str) -> String {
+    let width = 101;
+    let height = 103;
+    let data = parse(input);
+    let mut iterations = 0;
+    let (mut new_map, mut stacks) = iterate_x_times_stack_check(&data, width, height, 0);
+    loop {
+        (new_map, stacks) = iterate_x_times_stack_check(&new_map, width, height, 1);
+        iterations += 1;
+        if stacks {
+            let r_map = iterate_x_times(&new_map, width, height, 0);
+            print_map(&r_map, width, height);
+            println!("Currently at: {iterations} iterations.");
+            let mut s = String::new();
+            println!("Is this correct? ");
+            let _ = stdout().flush();
+            stdin()
+                .read_line(&mut s)
+                .expect("Did not enter a correct string");
+            if s.trim() == "y" || s.trim() == "yes" || s.trim() == "YES" || s.trim() == "Y" {
+                return iterations.to_string();
+            }
+        } //else {
+          // if iterations % 1000 == 0 {
+          //     let r_map = iterate_x_times(&new_map, width, height, 0);
+          //     print_map(&r_map, width, height);
+          //     println!("Currently at: {iterations}, nothing found.")
+          // }
+          //}
+    }
+    //println!("{data:?}");
     "works".to_string()
 }
 
@@ -202,6 +289,6 @@ mod tests {
     fn test_input() {
         let file = include_str!("../test-input-1.txt");
         let data = parse(file);
-        assert_eq!(process_map(11, 7, data, 100), "12");
+        assert_eq!(count_quadrants_after_iterations(11, 7, data, 100), "12");
     }
 }
