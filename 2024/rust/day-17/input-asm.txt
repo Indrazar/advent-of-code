@@ -1,0 +1,9 @@
+start:
+2, 4: BST A: B set to lower 3 bits of A
+1, 1: BXL 1: B = B XOR 1
+7, 5: CDV 5: C = A / 2^5 or C = A shifted right 5 bits
+0, 3: ADV 3: A = A / 2^3 or A = A shifted right 3 bits
+4, 3: BXC : B = B XOR C
+1, 6: BXL 6: B = B XOR 6
+5, 5: OUT B: Lower 3 bits of B are output as a digit
+3, 0: JNZ start: if A is not zero, jump to start 
