@@ -17,19 +17,6 @@ enum Color {
     Green,
 }
 
-// impl Color {
-//     fn iter() -> std::vec::IntoIter<Color> {
-//         vec![
-//             Color::White,
-//             Color::Blue,
-//             Color::Black,
-//             Color::Red,
-//             Color::Green,
-//         ]
-//         .into_iter()
-//     }
-// }
-
 fn ch_to_color(input: char) -> Color {
     match input {
         'w' => Color::White,
@@ -173,127 +160,23 @@ fn check_build(
     (false, vec![])
 }
 
-// fn collision(blocked: &Vec<(usize, usize)>, new: (usize, usize)) -> bool {
-//     for blocked_region in blocked {
-//         for i in blocked_region.0..=blocked_region.1 {
-//             if (new.0..=new.1).contains(&i) {
-//                 return true;
-//             }
-//         }
-//     }
-//     false
-// }
-
-// fn fit_around(
-//     req: &Vec<Color>,
-//     test: &Vec<Color>,
-//     req_indx: usize,
-//     constraint: Color,
-//     blocked: &Vec<(usize, usize)>,
-// ) -> (bool, usize, usize) {
-//     //println!("checking if {test:?} fits in {req:?} starting near {req_indx}");
-//     //find where test could fit based on the constraining color
-//     let mut rel_pos = usize::MAX;
-//     for (i, color) in test.iter().enumerate() {
-//         if *color == constraint {
-//             rel_pos = i;
-//         }
-//     }
-//     if rel_pos == usize::MAX {
-//         panic!("invalid test value {test:?} in fit_around, does not contain {constraint:?}");
-//     }
-//     if req_indx < rel_pos {
-//         println!("first {constraint:?} would put it outside bounds: {req_indx} < {rel_pos}");
-//         return (false, 0, 0);
-//     }
-//     let start_pos = req_indx - rel_pos;
-//     let end_pos = req_indx + test.len() - rel_pos - 1;
-//     if end_pos >= req.len() {
-//         println!("{test:?} is too long to fit");
-//         return (false, 0, 0);
-//     }
-//     // check do we collide with any blocked regions
-//     if collision(blocked, (start_pos, end_pos)) {
-//         println!("collision with blocked region");
-//         return (false, 0, 0);
-//     }
-//     // does it actually match the literal text?
-//     for (test_idx, req_idx) in (start_pos..=end_pos).enumerate() {
-//         if test[test_idx] != req[req_idx] {
-//             println!("does not match at {test_idx}");
-//             return (false, 0, 0);
-//         } else {
-//             // continue
-//         }
-//     }
-//     //println!("{test:?} fits into {req:?} starting at {req_indx}");
-//     (true, start_pos, end_pos)
-// }
-
-// fn check_build_with_constraint(
-//     req: &Vec<Color>,
-//     //start_map: &HashMap<(Color, usize), Vec<Vec<Color>>>,
-//     idx: usize,
-//     constraint: Color,
-//     constraint_list: &Vec<Vec<Color>>,
-//     mut blocked: Vec<(usize, usize)>,
-// ) -> bool {
-//     println!("checking {req:?} starting at {idx} with blocked: {blocked:?}");
-//     if idx >= req.len() {
-//         // we're at the end and we matched everything
-//         println!("already done");
-//         return true;
-//     }
-//     // check if there are any constraining colors even left
-//     let mut no_constraint = true;
-//     for i in idx..req.len() {
-//         if req[i] == constraint {
-//             no_constraint = false;
-//             break;
-//         }
-//     }
-//     if no_constraint {
-//         println!("no constraints remaining");
-//         return true;
-//     }
-//     // find first color we're constrained by
-//     for i in idx..req.len() {
-//         if req[i] == constraint {
-//             for possible in constraint_list {
-//                 print!("trying: {possible:?}: ");
-//                 let (check, start, end) = fit_around(req, possible, i, constraint, &blocked);
-//                 if check {
-//                     // mark section as blocked
-//                     println!("yes! new blocked section: ({start},{end})");
-//                     blocked.push((start, end));
-//                     // recursively call with updated idx
-//                     return check_build_with_constraint(
-//                         req,
-//                         end + 1,
-//                         constraint,
-//                         constraint_list,
-//                         blocked,
-//                     );
-//                 } else {
-//                     //try next possible
-//                     println!("nope");
-//                 }
-//             }
-//         }
-//     }
-//     false
-// }
-
-// fn find_constraint(map: &HashMap<(Color, usize), Vec<Vec<Color>>>) -> Vec<Color> {
-//     let mut res: Vec<Color> = Vec::new();
-//     for color in Color::iter() {
-//         match map.get(&(color, 1)) {
-//             Some(_) => {}
-//             None => res.push(color),
-//         }
-//     }
-//     res
-// }
+//not fast
+fn is_possible<'a>(request: &'a [Color], stripes: &'a [Vec<Color>]) -> bool {
+    stripes
+        .iter()
+        .map(|stripe| {
+            if request.starts_with(stripe) {
+                let new_request = &request[stripe.len()..];
+                if new_request.is_empty() {
+                    return true;
+                }
+                is_possible(new_request, stripes)
+            } else {
+                false
+            }
+        })
+        .any(|x| x)
+}
 
 pub fn process_part1(input: &str) -> String {
     let (stripes, requests) = parse(input);
@@ -301,7 +184,7 @@ pub fn process_part1(input: &str) -> String {
     // for (key, value) in map.iter() {
     //     println!("{key:?}: {}", value.len());
     // }
-    let mut reduced_list: Vec<Vec<Color>> = Vec::new();
+    let mut reduced_stripes: Vec<Vec<Color>> = Vec::new();
     for stripe in stripes.iter() {
         let (check, current) = check_build(stripe, &map, 0, vec![]);
         if check {
@@ -309,13 +192,13 @@ pub fn process_part1(input: &str) -> String {
                 // don't need something that can be constructed from smaller
             } else {
                 // can only be built by itself
-                reduced_list.push(stripe.clone());
+                reduced_stripes.push(stripe.clone());
             }
         } else {
             panic!("shouldn't get here")
         }
     }
-    let reduced_map = create_map(&reduced_list);
+    let reduced_map = create_map(&reduced_stripes);
     //println!("reduced list: {reduced_list:?}");
     let mut total = 0;
     for req in requests.iter() {
@@ -330,8 +213,68 @@ pub fn process_part1(input: &str) -> String {
     total.to_string()
 }
 
+fn count_possible<'a>(
+    request: &'a [Color],
+    stripes: &'a [Vec<Color>],
+    map: &mut HashMap<(&'a [Color], &'a [Vec<Color>]), usize>,
+) -> usize {
+    if let Some(v) = map.get(&(request, stripes)) {
+        return *v;
+    }
+    let res = stripes
+        .iter()
+        .filter_map(|stripe| {
+            if request.starts_with(stripe) {
+                let new_request = &request[stripe.len()..];
+                if new_request.is_empty() {
+                    return Some(1);
+                }
+                Some(count_possible(new_request, stripes, map))
+            } else {
+                None
+            }
+        })
+        .sum();
+    map.insert((request, stripes), res);
+    res
+}
+
 pub fn process_part2(input: &str) -> String {
-    "works".to_string()
+    let (stripes, requests) = parse(input);
+    let map = create_map(&stripes);
+    // for (key, value) in map.iter() {
+    //     println!("{key:?}: {}", value.len());
+    // }
+    let mut reduced_stripes: Vec<Vec<Color>> = Vec::new();
+    for stripe in stripes.iter() {
+        let (check, current) = check_build(stripe, &map, 0, vec![]);
+        if check {
+            if current.len() > 1 {
+                // don't need something that can be constructed from smaller
+            } else {
+                // can only be built by itself
+                reduced_stripes.push(stripe.clone());
+            }
+        } else {
+            panic!("shouldn't get here")
+        }
+    }
+    let reduced_map = create_map(&reduced_stripes);
+    let mut valid_requests: Vec<Vec<Color>> = Vec::new();
+    for req in requests.iter() {
+        let (check, _current) = check_build(req, &reduced_map, 0, vec![]);
+        if check {
+            //println!("{i}: for {req:?} found {current:?}");
+            valid_requests.push(req.clone());
+        } else {
+            //println!("{i}: no valid result");
+        }
+    }
+    let count: usize = requests
+        .iter()
+        .map(|req| count_possible(req, &stripes, &mut HashMap::new()))
+        .sum();
+    count.to_string()
 }
 
 #[cfg(test)]
@@ -342,6 +285,6 @@ mod tests {
     fn test_input() {
         let file = include_str!("../test-input-1.txt");
         assert_eq!(process_part1(file), "6");
-        //assert_eq!(process_part2(file), "16");
+        assert_eq!(process_part2(file), "16");
     }
 }
