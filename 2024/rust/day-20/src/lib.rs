@@ -416,12 +416,12 @@ pub fn process_part2(input: &str) -> String {
         Some(cost) => *cost,
         None => panic!("end could not be reached by floodfill"),
     };
-    println!("non-cheat cost determined");
+    //println!("non-cheat cost determined");
     let mut normal_track: Vec<Coord> = Vec::new();
     let mut rev_queue = VecDeque::new();
     rev_queue.push_back((end, end_cost));
     reverse_flood(&flood_map, &mut rev_queue, &mut normal_track);
-    println!("track found, {} tiles", normal_track.len());
+    //println!("track found, {} tiles", normal_track.len());
     let mut cheat_total_map: HashMap<(Coord, Coord), (usize, usize)> = HashMap::new();
     for start in normal_track.iter() {
         let end_cheat_cost_list = generate_phase_list(&map, &normal_track, start, 20);
@@ -454,10 +454,10 @@ pub fn process_part2(input: &str) -> String {
             }
         }
     }
-    println!(
-        "total cheat list generated: {} entries",
-        cheat_total_map.len()
-    );
+    // println!(
+    //     "total cheat list generated: {} entries",
+    //     cheat_total_map.len()
+    // );
     let mut cheat_savings: HashMap<usize, usize> = HashMap::new();
     // k.0 is the start
     // k.1 is the end
@@ -477,7 +477,7 @@ pub fn process_part2(input: &str) -> String {
             }
         }
     }
-    println!("all cheats counted");
+    //println!("all cheats counted");
     let mut output_string = String::new();
     let mut at_least_100: usize = 0;
     for i in 50..=best_cheat {
@@ -499,7 +499,7 @@ pub fn process_part2(input: &str) -> String {
         }
     }
     output_string = format!("{output_string}\n{at_least_100}");
-    println!("{output_string}");
+    //println!("{output_string}");
     output_string.to_string()
 }
 
