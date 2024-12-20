@@ -114,6 +114,7 @@ fn fit(req: &[Color], test: &[Color], req_indx: usize) -> bool {
     true
 }
 
+// not fast
 fn check_build(
     req: &Vec<Color>,
     map: &HashMap<(Color, usize), Vec<Vec<Color>>>,
@@ -161,8 +162,15 @@ fn check_build(
 }
 
 //not fast
-fn is_possible<'a>(request: &'a [Color], stripes: &'a [Vec<Color>]) -> bool {
-    stripes
+fn is_possible<'a>(
+    request: &'a [Color],
+    stripes: &'a [Vec<Color>],
+    map: &mut HashMap<(&'a [Color], &'a [Vec<Color>]), bool>,
+) -> bool {
+    if let Some(v) = map.get(&(request, stripes)) {
+        return *v;
+    }
+    let res = stripes
         .iter()
         .map(|stripe| {
             if request.starts_with(stripe) {
@@ -170,47 +178,23 @@ fn is_possible<'a>(request: &'a [Color], stripes: &'a [Vec<Color>]) -> bool {
                 if new_request.is_empty() {
                     return true;
                 }
-                is_possible(new_request, stripes)
+                is_possible(new_request, stripes, map)
             } else {
                 false
             }
         })
-        .any(|x| x)
+        .any(|x| x);
+    map.insert((request, stripes), res);
+    res
 }
 
 pub fn process_part1(input: &str) -> String {
     let (stripes, requests) = parse(input);
-    let map = create_map(&stripes);
-    // for (key, value) in map.iter() {
-    //     println!("{key:?}: {}", value.len());
-    // }
-    let mut reduced_stripes: Vec<Vec<Color>> = Vec::new();
-    for stripe in stripes.iter() {
-        let (check, current) = check_build(stripe, &map, 0, vec![]);
-        if check {
-            if current.len() > 1 {
-                // don't need something that can be constructed from smaller
-            } else {
-                // can only be built by itself
-                reduced_stripes.push(stripe.clone());
-            }
-        } else {
-            panic!("shouldn't get here")
-        }
-    }
-    let reduced_map = create_map(&reduced_stripes);
-    //println!("reduced list: {reduced_list:?}");
-    let mut total = 0;
-    for req in requests.iter() {
-        let (check, _current) = check_build(req, &reduced_map, 0, vec![]);
-        if check {
-            //println!("{i}: for {req:?} found {current:?}");
-            total += 1;
-        } else {
-            //println!("{i}: no valid result");
-        }
-    }
-    total.to_string()
+    let count: usize = requests
+        .iter()
+        .filter(|req| is_possible(req, &stripes, &mut HashMap::new()))
+        .count();
+    count.to_string()
 }
 
 fn count_possible<'a>(
@@ -241,35 +225,6 @@ fn count_possible<'a>(
 
 pub fn process_part2(input: &str) -> String {
     let (stripes, requests) = parse(input);
-    let map = create_map(&stripes);
-    // for (key, value) in map.iter() {
-    //     println!("{key:?}: {}", value.len());
-    // }
-    let mut reduced_stripes: Vec<Vec<Color>> = Vec::new();
-    for stripe in stripes.iter() {
-        let (check, current) = check_build(stripe, &map, 0, vec![]);
-        if check {
-            if current.len() > 1 {
-                // don't need something that can be constructed from smaller
-            } else {
-                // can only be built by itself
-                reduced_stripes.push(stripe.clone());
-            }
-        } else {
-            panic!("shouldn't get here")
-        }
-    }
-    let reduced_map = create_map(&reduced_stripes);
-    let mut valid_requests: Vec<Vec<Color>> = Vec::new();
-    for req in requests.iter() {
-        let (check, _current) = check_build(req, &reduced_map, 0, vec![]);
-        if check {
-            //println!("{i}: for {req:?} found {current:?}");
-            valid_requests.push(req.clone());
-        } else {
-            //println!("{i}: no valid result");
-        }
-    }
     let count: usize = requests
         .iter()
         .map(|req| count_possible(req, &stripes, &mut HashMap::new()))
