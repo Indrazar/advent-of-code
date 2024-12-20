@@ -355,8 +355,152 @@ pub fn process_part1(input: &str) -> String {
     output_string.to_string()
 }
 
+fn generate_phase_list(
+    map: &Vec<Vec<Tile>>,
+    track: &Vec<Coord>,
+    position: &Coord,
+    length: usize,
+) -> Vec<(Coord, usize)> {
+    let mut output: Vec<(Coord, usize)> = Vec::new();
+    // (start, end, time_cost)
+    // give every square with a manhattan distance of {length}
+    // given a length of 2:
+    // ...#...
+    // ..###..
+    // .##@##.
+    // ..###..
+    // ...#...
+    // given a length of 3:
+    // ....#....
+    // ...###...
+    // ..#####..
+    // .###@###.
+    // ..#####..
+    // ...###...
+    // ....#....
+    for (y, row) in map.iter().enumerate() {
+        for (x, tile) in row.iter().enumerate() {
+            if *tile != Tile::Wall {
+                if track.contains(&Coord { x, y }) {
+                    //valid endpoint
+                    let y_diff = if y > position.y {
+                        y - position.y
+                    } else {
+                        position.y - y
+                    };
+                    let x_diff = if x > position.x {
+                        x - position.x
+                    } else {
+                        position.x - x
+                    };
+                    let distance = y_diff + x_diff;
+                    if distance <= length && distance > 1 {
+                        output.push((Coord { x, y }, distance));
+                    }
+                }
+            }
+        }
+    }
+    //println!("generated {} cheat endpoints", output.len());
+    output
+}
+
 pub fn process_part2(input: &str) -> String {
-    "works".to_string()
+    let (start, end, map) = parse(input);
+    //print_map(&map);
+    let mut flood_map = HashMap::new();
+    let mut normal_queue = VecDeque::new();
+    normal_queue.push_back((start, 0));
+    flood_fill_with_count(&map, &mut normal_queue, &mut flood_map);
+    let end_cost = match flood_map.get(&end) {
+        Some(cost) => *cost,
+        None => panic!("end could not be reached by floodfill"),
+    };
+    println!("non-cheat cost determined");
+    let mut normal_track: Vec<Coord> = Vec::new();
+    let mut rev_queue = VecDeque::new();
+    rev_queue.push_back((end, end_cost));
+    reverse_flood(&flood_map, &mut rev_queue, &mut normal_track);
+    println!("track found, {} tiles", normal_track.len());
+    let mut cheat_total_map: HashMap<(Coord, Coord), (usize, usize)> = HashMap::new();
+    for start in normal_track.iter() {
+        let end_cheat_cost_list = generate_phase_list(&map, &normal_track, start, 20);
+        for (end, cheat_cost) in end_cheat_cost_list {
+            let current_cost = *flood_map
+                .get(&start)
+                .expect("this should be in the flood map");
+            let new_cost = cheat_cost + current_cost;
+            let old_cost = *flood_map
+                .get(&end)
+                .expect("this should be in the flood map");
+            if old_cost < new_cost {
+                //not a save, go next
+                continue;
+            }
+            let save = old_cost - new_cost;
+            let total_cost = end_cost - save;
+            match cheat_total_map.get_mut(&(*start, end)) {
+                Some((old_cheat_cost, old_savings)) => {
+                    if *old_cheat_cost < total_cost {
+                        continue;
+                    } else {
+                        *old_cheat_cost = total_cost;
+                        *old_savings = save;
+                    }
+                }
+                None => {
+                    cheat_total_map.insert((*start, end), (total_cost, save));
+                }
+            }
+        }
+    }
+    println!(
+        "total cheat list generated: {} entries",
+        cheat_total_map.len()
+    );
+    let mut cheat_savings: HashMap<usize, usize> = HashMap::new();
+    // k.0 is the start
+    // k.1 is the end
+    // v.0 is the total cost
+    // v.1 are the savings
+    let mut best_cheat: usize = 0;
+    for ((_, _), (_, savings)) in cheat_total_map.iter() {
+        if *savings > best_cheat {
+            best_cheat = *savings;
+        }
+        match cheat_savings.get_mut(savings) {
+            Some(count) => {
+                *count += 1;
+            }
+            None => {
+                cheat_savings.insert(*savings, 1);
+            }
+        }
+    }
+    println!("all cheats counted");
+    let mut output_string = String::new();
+    let mut at_least_100: usize = 0;
+    for i in 50..=best_cheat {
+        match cheat_savings.get(&i) {
+            Some(count) => {
+                if i >= 100 {
+                    at_least_100 += *count;
+                }
+                if *count == 1 {
+                    output_string =
+                        format!("{output_string}\nThere is one cheat that saves {i} picoseconds.");
+                } else {
+                    output_string = format!(
+                        "{output_string}\nThere are {count} cheats that save {i} picoseconds."
+                    );
+                }
+            }
+            None => {}
+        }
+    }
+    output_string = format!("{output_string}\n{at_least_100}");
+    println!("{output_string}");
+    output_string.to_string()
 }
 
 #[cfg(test)]
@@ -380,6 +524,25 @@ There is one cheat that saves 36 picoseconds.
 There is one cheat that saves 38 picoseconds.
 There is one cheat that saves 40 picoseconds.
 There is one cheat that saves 64 picoseconds.
+0"
+        );
+        assert_eq!(
+            process_part2(file),
+            "
+There are 32 cheats that save 50 picoseconds.
+There are 31 cheats that save 52 picoseconds.
+There are 29 cheats that save 54 picoseconds.
+There are 39 cheats that save 56 picoseconds.
+There are 25 cheats that save 58 picoseconds.
+There are 23 cheats that save 60 picoseconds.
+There are 20 cheats that save 62 picoseconds.
+There are 19 cheats that save 64 picoseconds.
+There are 12 cheats that save 66 picoseconds.
+There are 14 cheats that save 68 picoseconds.
+There are 12 cheats that save 70 picoseconds.
+There are 22 cheats that save 72 picoseconds.
+There are 4 cheats that save 74 picoseconds.
+There are 3 cheats that save 76 picoseconds.
 0"
         );
     }

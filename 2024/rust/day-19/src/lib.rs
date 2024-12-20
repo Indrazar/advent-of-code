@@ -128,8 +128,8 @@ fn check_build(
     }
     // biggest first mode
     //for i in (1..(req.len() - idx + 1)).rev() {
-    // smallest first mode
 
+    // smallest first mode
     for i in 1..(req.len() - idx + 1) {
         //println!("checking for a len of {i} at {idx}");
         match map.get(&(req[idx], i)) {
