@@ -41,7 +41,7 @@ fn parse(input: &str) -> (Coord, Coord, Vec<Vec<Tile>>) {
     (start, end, map)
 }
 
-fn print_map(input: &Vec<Vec<Tile>>) {
+fn print_map(input: &[Vec<Tile>]) {
     println!("current map:");
     for y in input.iter() {
         for x in y.iter() {
@@ -65,7 +65,7 @@ fn print_map(input: &Vec<Vec<Tile>>) {
 }
 
 fn flood_fill_with_count(
-    map: &Vec<Vec<Tile>>,
+    map: &[Vec<Tile>],
     position_queue: &mut VecDeque<(Coord, usize)>,
     flood_map: &mut HashMap<Coord, usize>,
 ) {
@@ -216,54 +216,34 @@ fn reverse_flood(
     }
 }
 
-fn generate_list_of_adjacent_walls(map: &Vec<Vec<Tile>>, middle_point: Coord) -> Vec<Coord> {
+fn generate_list_of_adjacent_walls(map: &[Vec<Tile>], middle_point: Coord) -> Vec<Coord> {
     let mut tile_list: Vec<Coord> = Vec::with_capacity(8);
-    if middle_point.y > 0 {
-        match map[middle_point.y - 1][middle_point.x] {
-            Tile::Wall => {
-                tile_list.push(Coord {
-                    x: middle_point.x,
-                    y: middle_point.y - 1,
-                });
-            }
-            _ => {}
-        }
+    if middle_point.y > 0 && map[middle_point.y - 1][middle_point.x] == Tile::Wall {
+        tile_list.push(Coord {
+            x: middle_point.x,
+            y: middle_point.y - 1,
+        });
     }
     // try down
-    if middle_point.y < map.len() - 1 {
-        match map[middle_point.y + 1][middle_point.x] {
-            Tile::Wall => {
-                tile_list.push(Coord {
-                    x: middle_point.x,
-                    y: middle_point.y + 1,
-                });
-            }
-            _ => {}
-        }
+    if middle_point.y < map.len() - 1 && map[middle_point.y + 1][middle_point.x] == Tile::Wall {
+        tile_list.push(Coord {
+            x: middle_point.x,
+            y: middle_point.y + 1,
+        });
     }
     // try left
-    if middle_point.x > 0 {
-        match map[middle_point.y][middle_point.x - 1] {
-            Tile::Wall => {
-                tile_list.push(Coord {
-                    x: middle_point.x - 1,
-                    y: middle_point.y,
-                });
-            }
-            _ => {}
-        }
+    if middle_point.x > 0 && map[middle_point.y][middle_point.x - 1] == Tile::Wall {
+        tile_list.push(Coord {
+            x: middle_point.x - 1,
+            y: middle_point.y,
+        });
     }
     // try right
-    if middle_point.x < map.len() - 1 {
-        match map[middle_point.y][middle_point.x + 1] {
-            Tile::Wall => {
-                tile_list.push(Coord {
-                    x: middle_point.x + 1,
-                    y: middle_point.y,
-                });
-            }
-            _ => {}
-        }
+    if middle_point.x < map.len() - 1 && map[middle_point.y][middle_point.x + 1] == Tile::Wall {
+        tile_list.push(Coord {
+            x: middle_point.x + 1,
+            y: middle_point.y,
+        });
     }
     tile_list
 }
@@ -333,21 +313,17 @@ pub fn process_part1(input: &str) -> String {
     let mut output_string = String::new();
     let mut at_least_100: usize = 0;
     for i in 1..=best_cheat {
-        match cheat_sort.get(&i) {
-            Some(count) => {
-                if i >= 100 {
-                    at_least_100 += *count;
-                }
-                if *count == 1 {
-                    output_string =
-                        format!("{output_string}\nThere is one cheat that saves {i} picoseconds.");
-                } else {
-                    output_string = format!(
-                        "{output_string}\nThere are {count} cheats that save {i} picoseconds."
-                    );
-                }
+        if let Some(count) = cheat_sort.get(&i) {
+            if i >= 100 {
+                at_least_100 += *count;
             }
-            None => {}
+            if *count == 1 {
+                output_string =
+                    format!("{output_string}\nThere is one cheat that saves {i} picoseconds.");
+            } else {
+                output_string =
+                    format!("{output_string}\nThere are {count} cheats that save {i} picoseconds.");
+            }
         }
     }
     output_string = format!("{output_string}\n{at_least_100}");
@@ -356,8 +332,8 @@ pub fn process_part1(input: &str) -> String {
 }
 
 fn generate_phase_list(
-    map: &Vec<Vec<Tile>>,
-    track: &Vec<Coord>,
+    map: &[Vec<Tile>],
+    track: &[Coord],
     position: &Coord,
     length: usize,
 ) -> Vec<(Coord, usize)> {
@@ -380,23 +356,21 @@ fn generate_phase_list(
     // ....#....
     for (y, row) in map.iter().enumerate() {
         for (x, tile) in row.iter().enumerate() {
-            if *tile != Tile::Wall {
-                if track.contains(&Coord { x, y }) {
-                    //valid endpoint
-                    let y_diff = if y > position.y {
-                        y - position.y
-                    } else {
-                        position.y - y
-                    };
-                    let x_diff = if x > position.x {
-                        x - position.x
-                    } else {
-                        position.x - x
-                    };
-                    let distance = y_diff + x_diff;
-                    if distance <= length && distance > 1 {
-                        output.push((Coord { x, y }, distance));
-                    }
+            if *tile != Tile::Wall && track.contains(&Coord { x, y }) {
+                //valid endpoint
+                let y_diff = if y > position.y {
+                    y - position.y
+                } else {
+                    position.y - y
+                };
+                let x_diff = if x > position.x {
+                    x - position.x
+                } else {
+                    position.x - x
+                };
+                let distance = y_diff + x_diff;
+                if distance <= length && distance > 1 {
+                    output.push((Coord { x, y }, distance));
                 }
             }
         }
@@ -427,7 +401,7 @@ pub fn process_part2(input: &str) -> String {
         let end_cheat_cost_list = generate_phase_list(&map, &normal_track, start, 20);
         for (end, cheat_cost) in end_cheat_cost_list {
             let current_cost = *flood_map
-                .get(&start)
+                .get(start)
                 .expect("this should be in the flood map");
             let new_cost = cheat_cost + current_cost;
             let old_cost = *flood_map
@@ -481,21 +455,17 @@ pub fn process_part2(input: &str) -> String {
     let mut output_string = String::new();
     let mut at_least_100: usize = 0;
     for i in 50..=best_cheat {
-        match cheat_savings.get(&i) {
-            Some(count) => {
-                if i >= 100 {
-                    at_least_100 += *count;
-                }
-                if *count == 1 {
-                    output_string =
-                        format!("{output_string}\nThere is one cheat that saves {i} picoseconds.");
-                } else {
-                    output_string = format!(
-                        "{output_string}\nThere are {count} cheats that save {i} picoseconds."
-                    );
-                }
+        if let Some(count) = cheat_savings.get(&i) {
+            if i >= 100 {
+                at_least_100 += *count;
             }
-            None => {}
+            if *count == 1 {
+                output_string =
+                    format!("{output_string}\nThere is one cheat that saves {i} picoseconds.");
+            } else {
+                output_string =
+                    format!("{output_string}\nThere are {count} cheats that save {i} picoseconds.");
+            }
         }
     }
     output_string = format!("{output_string}\n{at_least_100}");
