@@ -1,3 +1,5 @@
+use std::{collections::HashMap, usize};
+
 use itertools::Itertools;
 use nom::{bytes::complete::tag, character::complete, sequence::terminated};
 
@@ -193,7 +195,14 @@ fn validate_dpad_path(start: DPad, end: DPad, inputs: &Vec<DPad>) -> bool {
     }
 }
 
-fn dpad_list_from_dpad(start: DPad, end: DPad) -> Vec<Seq> {
+fn dpad_list_from_dpad(
+    start: DPad,
+    end: DPad,
+    map: &mut HashMap<(DPad, DPad), Vec<Seq>>,
+) -> Vec<Seq> {
+    if let Some(res) = map.get(&(start, end)) {
+        return res.clone();
+    }
     let mut seq = match (start, end) {
         (DPad::U, DPad::U) => vec![],
         (DPad::U, DPad::A) => vec![DPad::R],
@@ -235,12 +244,14 @@ fn dpad_list_from_dpad(start: DPad, end: DPad) -> Vec<Seq> {
         for s in res.iter_mut() {
             s.push(DPad::A);
         }
+        map.insert((start, end), res.clone());
         res
     } else {
         if !validate_dpad_path(start, end, &seq) {
             panic!("invalid route")
         }
         seq.push(DPad::A);
+        map.insert((start, end), vec![seq.clone()]);
         vec![seq]
     }
 }
@@ -276,7 +287,14 @@ fn validate_npad_path(start: NPad, end: NPad, inputs: &Vec<DPad>) -> bool {
     NMAP[current_coord.y][current_coord.x] == end
 }
 
-fn dpad_list_from_npad(start: NPad, end: NPad) -> Vec<Seq> {
+fn dpad_list_from_npad(
+    start: NPad,
+    end: NPad,
+    map: &mut HashMap<(NPad, NPad), Vec<Seq>>,
+) -> Vec<Seq> {
+    if let Some(res) = map.get(&(start, end)) {
+        return res.clone();
+    }
     let mut seq = match (start, end) {
         (NPad::Seven, NPad::Seven) => vec![],
         (NPad::Seven, NPad::Eight) => vec![DPad::R],
@@ -414,12 +432,14 @@ fn dpad_list_from_npad(start: NPad, end: NPad) -> Vec<Seq> {
         for s in res.iter_mut() {
             s.push(DPad::A);
         }
+        map.insert((start, end), res.clone());
         res
     } else {
         if !validate_npad_path(start, end, &seq) {
             panic!("invalid route")
         }
         seq.push(DPad::A);
+        map.insert((start, end), vec![seq.clone()]);
         vec![seq]
     }
 }
@@ -454,18 +474,20 @@ fn parse(input: &str) -> Vec<(u32, Vec<NPad>)> {
 
 pub fn process_part1(input: &str) -> String {
     let codes = parse(input);
+    let mut nmap: HashMap<(NPad, NPad), Vec<Seq>> = HashMap::new();
+    let mut dmap: HashMap<(DPad, DPad), Vec<Seq>> = HashMap::new();
     //println!("{codes:?}");
     let mut total: usize = 0;
     for (val, code) in codes {
         //innermost robot
         //println!("code: {}: {code:?}", code.len());
         // start on A go to first key
-        let mut robot1_task: Vec<Seq> = dpad_list_from_npad(NPad::A, code[0]);
+        let mut robot1_task: Vec<Seq> = dpad_list_from_npad(NPad::A, code[0], &mut nmap);
         for pair in code.windows(2) {
             let start = pair[0];
             let end = pair[1];
             let mut new_task_list: Vec<Seq> = Vec::new();
-            let new_step_list = dpad_list_from_npad(start, end);
+            let new_step_list = dpad_list_from_npad(start, end, &mut nmap);
             for old_steps in robot1_task.iter() {
                 //println!("robot 1: {new_step_list:?}");
                 for new_steps in new_step_list.iter() {
@@ -490,7 +512,7 @@ pub fn process_part1(input: &str) -> String {
         for seq1 in robot1_task.iter() {
             // start on A go to first key
             //println!("start: A, end: {:?}", seq1[0]);
-            robot2_task = dpad_list_from_dpad(DPad::A, seq1[0]);
+            robot2_task = dpad_list_from_dpad(DPad::A, seq1[0], &mut dmap);
             //println!("robot 2: {robot2_task:?}");
             for pair in seq1.windows(2) {
                 let start = pair[0];
@@ -498,7 +520,7 @@ pub fn process_part1(input: &str) -> String {
                 //println!("robot2_task so far: {robot2_task:?}");
                 //println!("start: {start:?}, end: {end:?}");
                 let mut new_task_list: Vec<Seq> = Vec::new();
-                let new_step_list = dpad_list_from_dpad(start, end);
+                let new_step_list = dpad_list_from_dpad(start, end, &mut dmap);
                 //println!("robot 2: {new_step_list:?}");
                 for old_steps in robot2_task.iter() {
                     for new_steps in new_step_list.iter() {
@@ -512,12 +534,21 @@ pub fn process_part1(input: &str) -> String {
             robot2_total.extend(robot2_task);
         }
         let mut shortest2 = usize::MAX;
+        let mut sizes: HashMap<usize, usize> = HashMap::new();
         for seq2 in robot2_total.iter() {
+            sizes.entry(seq2.len()).and_modify(|e| *e += 1).or_insert(1);
             //println!("{}: {:?}", seq2.len(), seq2);
             if seq2.len() < shortest2 {
                 shortest2 = seq2.len();
             }
         }
+        // for (k, v) in sizes.into_iter().sorted_by(|(k, _), (k2, _)| k.cmp(k2)) {
+        //     println!("r2 length: {k}, count: {v}");
+        // }
+        robot2_total = robot2_total
+            .into_iter()
+            .filter(|seq| seq.len() == shortest2)
+            .collect();
         // println!("robot2 shortest: {shortest2}");
         // println!("robot2: {}: {robot2_task:?}", robot2_task.len());
         let mut robot3_total: Vec<Seq> = Vec::new();
@@ -525,7 +556,7 @@ pub fn process_part1(input: &str) -> String {
         for seq1 in robot2_total.iter() {
             // start on A go to first key
             //println!("start: A, end: {:?}", seq1[0]);
-            robot3_task = dpad_list_from_dpad(DPad::A, seq1[0]);
+            robot3_task = dpad_list_from_dpad(DPad::A, seq1[0], &mut dmap);
             //println!("robot 3: {robot3_task:?}");
             for pair in seq1.windows(2) {
                 let start = pair[0];
@@ -533,7 +564,7 @@ pub fn process_part1(input: &str) -> String {
                 //println!("robot3_task so far: {robot3_task:?}");
                 //println!("start: {start:?}, end: {end:?}");
                 let mut new_task_list: Vec<Seq> = Vec::new();
-                let new_step_list = dpad_list_from_dpad(start, end);
+                let new_step_list = dpad_list_from_dpad(start, end, &mut dmap);
                 //println!("robot 3: {new_step_list:?}");
                 for old_steps in robot3_task.iter() {
                     for new_steps in new_step_list.iter() {
@@ -548,13 +579,19 @@ pub fn process_part1(input: &str) -> String {
         }
         let mut shortest3 = usize::MAX;
         //print!("lengths: ");
+        let mut sizes: HashMap<usize, usize> = HashMap::new();
         for seq3 in robot3_total.iter() {
+            sizes.entry(seq3.len()).and_modify(|e| *e += 1).or_insert(1);
             //print!("{}, ", seq3.len());
             if seq3.len() < shortest3 {
                 shortest3 = seq3.len();
             }
         }
-        //println!("robot3 shortest: {shortest3}");
+        // for (k, v) in sizes.into_iter().sorted_by(|(k, _), (k2, _)| k.cmp(k2)) {
+        //     println!("r3 length: {k}, count: {v}");
+        // }
+        // println!();
+        // println!("robot3 shortest: {shortest3}");
         // println!(
         //     "robot3 routes: {}:\nroute0: {}: {:?}",
         //     robot3_total.len(),
@@ -567,8 +604,141 @@ pub fn process_part1(input: &str) -> String {
     total.to_string()
 }
 
+fn expand_by_dpad(input: Vec<Seq>, map: &mut HashMap<(DPad, DPad), Vec<Seq>>) -> Vec<Seq> {
+    let mut robot_next_total: Vec<Seq> = Vec::new();
+    let mut robot_next_task;
+    for seq1 in input.iter() {
+        // start on A go to first key
+        //println!("start: A, end: {:?}", seq1[0]);
+        robot_next_task = dpad_list_from_dpad(DPad::A, seq1[0], map);
+        //println!("robot 2: {robot_next_task:?}");
+        for pair in seq1.windows(2) {
+            let start = pair[0];
+            let end = pair[1];
+            //println!("robot_next_task so far: {robot_next_task:?}");
+            //println!("start: {start:?}, end: {end:?}");
+            let mut new_task_list: Vec<Seq> = Vec::new();
+            let new_step_list = dpad_list_from_dpad(start, end, map);
+            //println!("robot next: {new_step_list:?}");
+            for old_steps in robot_next_task.iter() {
+                for new_steps in new_step_list.iter() {
+                    let mut result_steps = old_steps.clone();
+                    result_steps.extend(new_steps);
+                    new_task_list.push(result_steps);
+                }
+            }
+            robot_next_task = new_task_list;
+        }
+        robot_next_total.extend(robot_next_task);
+    }
+    let mut shortest_next = usize::MAX;
+    //let mut sizes: HashMap<usize, usize> = HashMap::new();
+    for seq2 in robot_next_total.iter() {
+        //sizes.entry(seq2.len()).and_modify(|e| *e += 1).or_insert(1);
+        //println!("{}: {:?}", seq2.len(), seq2);
+        if seq2.len() < shortest_next {
+            shortest_next = seq2.len();
+        }
+    }
+    // for (k, v) in sizes.into_iter().sorted_by(|(k, _), (k2, _)| k.cmp(k2)) {
+    //     println!("r2 length: {k}, count: {v}");
+    // }
+    robot_next_total = robot_next_total
+        .into_iter()
+        .filter(|seq| seq.len() == shortest_next)
+        .collect();
+    robot_next_total
+}
+
+fn calc_cost(
+    start: DPad,
+    end: DPad,
+    depth: usize,
+    cost_map: &mut HashMap<(DPad, DPad, usize), usize>,
+    dpad_map: &mut HashMap<(DPad, DPad), Vec<Seq>>,
+) -> usize {
+    if let Some(val) = cost_map.get(&(start, end, depth)) {
+        return *val;
+    } else {
+        // the innermost robot is calcuated via npad so we stop at the 1st robot
+        if depth == 1 {
+            let res = dpad_list_from_dpad(start, end, dpad_map);
+            let mut shortest = usize::MAX;
+            for seq in res {
+                shortest = shortest.min(seq.len());
+            }
+            cost_map.insert((start, end, depth), shortest);
+            shortest
+        } else {
+            let sequence_list: Vec<Seq> = dpad_list_from_dpad(start, end, dpad_map);
+            let mut best_cost = usize::MAX;
+            for seq in sequence_list {
+                // push an a onto the front
+                let mut aug_seq = vec![DPad::A];
+                aug_seq.extend(seq);
+                let mut cost = 0;
+                for i in 0..aug_seq.len() - 1 {
+                    let new_start = aug_seq[i];
+                    let new_end = aug_seq[i + 1];
+                    cost += calc_cost(new_start, new_end, depth - 1, cost_map, dpad_map);
+                }
+                best_cost = best_cost.min(cost);
+            }
+            //println!("new best cost for {start:?}, {end:?}, depth: {depth}: {best_cost}");
+            cost_map.insert((start, end, depth), best_cost);
+            best_cost
+        }
+    }
+}
+
 pub fn process_part2(input: &str) -> String {
-    "works".to_string()
+    let mut nmap: HashMap<(NPad, NPad), Vec<Seq>> = HashMap::new();
+    let mut dmap: HashMap<(DPad, DPad), Vec<Seq>> = HashMap::new();
+    let codes = parse(input);
+    let mut map: HashMap<(DPad, DPad, usize), usize> = HashMap::new();
+    //println!("{codes:?}");
+    let mut total: usize = 0;
+    for (val, code) in codes {
+        // start on A go to first key
+        //println!("code: {code:?}");
+        let mut keypad_robot_task: Vec<Seq> = dpad_list_from_npad(NPad::A, code[0], &mut nmap);
+        for pair in code.windows(2) {
+            let start = pair[0];
+            let end = pair[1];
+            let mut new_task_list: Vec<Seq> = Vec::new();
+            let new_step_list = dpad_list_from_npad(start, end, &mut nmap);
+            for old_steps in keypad_robot_task.iter() {
+                //println!("robot 1: {new_step_list:?}");
+                for new_steps in new_step_list.iter() {
+                    let mut result_steps = old_steps.clone();
+                    result_steps.extend(new_steps);
+                    new_task_list.push(result_steps);
+                }
+            }
+            keypad_robot_task = new_task_list;
+        }
+        //println!("keypad_robot_task: {keypad_robot_task:?}");
+        let mut cheapest_seq = usize::MAX;
+        for seq in keypad_robot_task {
+            let mut seq_cost = calc_cost(DPad::A, seq[0], 25, &mut map, &mut dmap);
+            //println!("cost to press seq[0]:{:?}:{seq_cost}", seq[0]);
+            for pair in seq.windows(2) {
+                let start = pair[0];
+                let end = pair[1];
+                seq_cost += calc_cost(start, end, 25, &mut map, &mut dmap);
+                // println!(
+                //     "total cost so far to press seq[{}]:{:?}:{seq_cost}",
+                //     i + 1,
+                //     end
+                // );
+            }
+            cheapest_seq = cheapest_seq.min(seq_cost);
+        }
+
+        //println!("complexity: {}*{}", cheapest_seq, val);
+        total += val as usize * cheapest_seq;
+    }
+    total.to_string()
 }
 
 #[cfg(test)]
@@ -791,10 +961,21 @@ mod tests {
             }
     }
 
+    // #[test]
+    // fn test_expansion_rate() {
+    //     let robot1_task = vec![vec![DPad::L, DPad::A]];
+    //     let mut res = expand_by_dpad(robot1_task);
+    //     for i in 0..25 {
+    //         println!("depth: {i}: {}", res[0].len());
+    //         res = expand_by_dpad(res);
+    //     }
+    //     assert_eq!(res[0].len(), 1);
+    // }
+
     #[test]
     fn test_dpad() {
         assert_eq!(
-            dpad_list_from_dpad(DPad::A, DPad::R),
+            dpad_list_from_dpad(DPad::A, DPad::R, &mut HashMap::new()),
             vec![vec![DPad::D, DPad::A]]
         );
 
@@ -828,34 +1009,10 @@ mod tests {
                 DPad::A,
             ],
         ];
-        let mut robot2_total: Vec<Seq> = Vec::new();
-        let mut robot2_task;
-        for seq1 in robot1_task.iter() {
-            // start on A go to first key
-            println!("start: A, end: {:?}", seq1[0]);
-            robot2_task = dpad_list_from_dpad(DPad::A, seq1[0]);
-            println!("robot 2: {robot2_task:?}");
-            for pair in seq1.windows(2) {
-                let start = pair[0];
-                let end = pair[1];
-                println!("robot2_task so far: {robot2_task:?}");
-                println!("start: {start:?}, end: {end:?}");
-                let mut new_task_list: Vec<Seq> = Vec::new();
-                let new_step_list = dpad_list_from_dpad(start, end);
-                println!("robot 2: {new_step_list:?}");
-                for old_steps in robot2_task.iter() {
-                    for new_steps in new_step_list.iter() {
-                        let mut result_steps = old_steps.clone();
-                        result_steps.extend(new_steps);
-                        new_task_list.push(result_steps);
-                    }
-                }
-                robot2_task = new_task_list;
-            }
-            robot2_total.extend(robot2_task);
-        }
+        let res = expand_by_dpad(robot1_task, &mut HashMap::new());
+
         assert_eq!(
-            robot2_total.contains(&vec![
+            res.contains(&vec![
                 DPad::D,
                 DPad::L,
                 DPad::L,
@@ -908,7 +1065,7 @@ mod tests {
         for start in npad_list {
             for end in npad_list {
                 println!("starting {start:?}, ending {end:?}");
-                let sequence_list = dpad_list_from_npad(start, end);
+                let sequence_list = dpad_list_from_npad(start, end, &mut HashMap::new());
                 assert_eq!(
                     validate_npad_route_count(start, end, sequence_list.len()),
                     true
@@ -922,7 +1079,7 @@ mod tests {
         for start in dpad_list {
             for end in dpad_list {
                 println!("starting {start:?}, ending {end:?}");
-                let sequence_list = dpad_list_from_dpad(start, end);
+                let sequence_list = dpad_list_from_dpad(start, end, &mut HashMap::new());
                 assert_eq!(
                     validate_dpad_route_count(start, end, sequence_list.len()),
                     true
