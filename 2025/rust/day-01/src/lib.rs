@@ -65,14 +65,51 @@ impl Dial {
             }
         }
     }
-    pub fn left(&mut self, distance: i32) {
+    pub fn left_slow(&mut self, distance: i32) {
         for _ in 1..=distance {
             self.single_left();
         }
     }
-    pub fn right(&mut self, distance: i32) {
+    pub fn right_slow(&mut self, distance: i32) {
         for _ in 1..=distance {
             self.single_right();
+        }
+    }
+    pub fn left_faster(&mut self, distance: i32) {
+        let start = self.reading;
+        if start > 0 {
+            self.reading -= distance;
+            while self.reading < 0 {
+                self.reading += 100;
+                self.zero_passes += 1;
+            }
+        } else if start == 0 {
+            let mut first = true;
+            self.reading -= distance;
+            while self.reading < 0 {
+                self.reading += 100;
+                if first {
+                    first = false;
+                } else {
+                    self.zero_passes += 1
+                }
+            }
+        } else {
+            panic!("dial reading is invalid: {}", self.reading)
+        }
+        if self.reading == 0 {
+            self.zero_passes += 1;
+        }
+    }
+    pub fn right_faster(&mut self, distance: i32) {
+        let start = self.reading;
+        if start > 99 || start < 0 {
+            panic!("dial reading is invalid {}", self.reading)
+        }
+        self.reading += distance;
+        while self.reading > 99 {
+            self.reading -= 100;
+            self.zero_passes += 1;
         }
     }
 }
@@ -85,8 +122,8 @@ pub fn process_part2(input: &str) -> String {
     for line in input.lines() {
         let (direction, count) = line.split_at(1);
         match direction {
-            "L" => safe.left(count.parse::<i32>().unwrap()),
-            "R" => safe.right(count.parse::<i32>().unwrap()),
+            "L" => safe.left_faster(count.parse::<i32>().unwrap()),
+            "R" => safe.right_faster(count.parse::<i32>().unwrap()),
             _ => panic!("this isn't a valid letter"),
         }
     }
@@ -102,5 +139,7 @@ mod tests {
         let file = include_str!("../test-input-1.txt");
         assert_eq!(process_part1(file), "3");
         assert_eq!(process_part2(file), "6");
+        let file = include_str!("../input.txt");
+        assert_eq!(process_part2(file), "5923");
     }
 }
