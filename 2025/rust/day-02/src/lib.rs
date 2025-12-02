@@ -25,7 +25,7 @@ pub fn process_part2(input: &str) -> String {
         let right: u64 = range.next().unwrap().parse().unwrap();
         for value in left..=right {
             let stringed = format!("{value}");
-            for window_size in 1..=stringed.len() / 2 {
+            'windows: for window_size in 1..=stringed.len() / 2 {
                 if stringed.len() % window_size == 0 {
                     let str_chunks: Vec<String> = stringed
                         .chars()
@@ -33,17 +33,13 @@ pub fn process_part2(input: &str) -> String {
                         .chunks(window_size)
                         .map(|chunk| chunk.iter().collect::<String>())
                         .collect();
-                    let mut all_match = true;
                     for i in 0..str_chunks.len() - 1 {
                         if str_chunks[i] != str_chunks[i + 1] {
-                            all_match = false;
-                            continue;
+                            continue 'windows;
                         }
                     }
-                    if all_match {
-                        invalid_ids.push(value);
-                        break;
-                    }
+                    invalid_ids.push(value);
+                    break;
                 }
             }
         }
